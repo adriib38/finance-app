@@ -1,0 +1,443 @@
+{
+  "info": {
+    "_postman_id": "a7c3e1d2-4b5f-4a6c-8e9d-0f1a2b3c4d5e",
+    "name": "Finance App API",
+    "description": "Colección de todos los endpoints del backend de Finance App.\n\n**Autenticación**: ejecuta primero `Auth > Signin`. El backend responde con una cookie `access_token` (httpOnly, 1h) que Postman guarda en su cookie jar y reenvía automáticamente al resto de peticiones del mismo dominio. Rellena la variable de colección `password` antes de empezar.\n\n**Variables de colección**:\n- `baseUrl` — host del backend (por defecto `http://localhost:4000`).\n- `username` / `password` — credenciales de la cuenta única `admin`.\n- `categoriaId`, `categoriaIngresoId`, `registroId`, `sourceCategoriaId` — se rellenan solas al ejecutar las peticiones de listado (scripts de Test), o a mano.\n\nRutas: prefijo de la API `/api/v1`. Stats en `/api/v1/stats`, categorías en `/api/v1/categorias`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000", "type": "string" },
+    { "key": "username", "value": "admin", "type": "string" },
+    { "key": "password", "value": "", "type": "string" },
+    { "key": "categoriaId", "value": "", "type": "string" },
+    { "key": "categoriaIngresoId", "value": "", "type": "string" },
+    { "key": "registroId", "value": "", "type": "string" },
+    { "key": "sourceCategoriaId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Salud",
+      "item": [
+        {
+          "name": "Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["status"]
+            },
+            "description": "Comprobación de vida. No requiere auth. `200 { \"message\": \"Okay :)\" }`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Signin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('devuelve user', () => pm.expect(pm.response.json()).to.have.property('user'));",
+                  "// La cookie access_token queda guardada en el cookie jar de Postman."
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/signin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "signin"]
+            },
+            "description": "Inicia sesión y setea la cookie `access_token`.\n\n- `200` → `{ user }` + `Set-Cookie`\n- `400` faltan campos / validación (username 3-20, password 8-128)\n- `404` User not found\n- `401` Invalid password"
+          },
+          "response": []
+        },
+        {
+          "name": "Signout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/signout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "signout"]
+            },
+            "description": "Expira la cookie `access_token`. `200 { \"message\": \"User logged out successfully\" }`."
+          },
+          "response": []
+        },
+        {
+          "name": "Usuario actual",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/user",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "user"]
+            },
+            "description": "🔒 Datos de la cuenta autenticada. `200 { \"user\": { username, created_at } }`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Categorías",
+      "item": [
+        {
+          "name": "Listar categorías",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const list = pm.response.json();",
+                  "if (Array.isArray(list) && list.length) {",
+                  "  const gasto = list.find(c => c.tipo === 'gasto');",
+                  "  const ingreso = list.find(c => c.tipo === 'ingreso');",
+                  "  if (gasto) pm.collectionVariables.set('categoriaId', gasto.id);",
+                  "  if (ingreso) pm.collectionVariables.set('categoriaIngresoId', ingreso.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categorias?tipo=gasto",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "categorias"],
+              "query": [
+                { "key": "tipo", "value": "gasto", "description": "opcional: 'gasto' | 'ingreso'" }
+              ]
+            },
+            "description": "🔒 Lista de categorías del usuario, ordenadas por tipo, orden y nombre.\n\nRespuesta: `[{ id, nombre, tipo, color, activa, orden, created_at }]`."
+          },
+          "response": []
+        },
+        {
+          "name": "Crear categoría",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('categoriaId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Pruebas Postman\",\n  \"tipo\": \"gasto\",\n  \"color\": \"#3D5A80\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categorias",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "categorias"]
+            },
+            "description": "🔒 Crea una categoría.\n\n- Body: `{ nombre, tipo: 'gasto'|'ingreso', color?: '#rrggbb' }` (color opcional; si falta se asigna uno de la paleta).\n- `201` → categoría creada\n- `400` nombre vacío / tipo inválido / color no hex\n- `409` ya existe (nombre + tipo)"
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar categoría",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Pruebas Postman (editada)\",\n  \"color\": \"#BC4B51\",\n  \"activa\": true,\n  \"orden\": 5\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categorias/{{categoriaId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "categorias", "{{categoriaId}}"]
+            },
+            "description": "🔒 Actualización parcial. Body: cualquiera de `{ nombre?, color?, activa?, orden? }`.\n\nSi cambia `nombre`, se sincroniza `registros.categoria` de sus registros.\n\n- `200` → categoría · `400` · `404` no encontrada · `409` duplicado"
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar categoría",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categorias/{{categoriaId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "categorias", "{{categoriaId}}"]
+            },
+            "description": "🔒 Borra la categoría. Los registros que la usaban quedan con `categoria_id = NULL` (conservan el texto).\n\n- `200 { \"message\": \"Categoría eliminada\" }` · `404` no encontrada"
+          },
+          "response": []
+        },
+        {
+          "name": "Fusionar categoría",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceId\": \"{{sourceCategoriaId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categorias/{{categoriaId}}/merge",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "categorias", "{{categoriaId}}", "merge"]
+            },
+            "description": "🔒 Fusiona la categoría `sourceId` dentro de `:id` (destino): reasigna sus registros y borra `sourceId`.\n\n- Body: `{ sourceId }`\n- `200` → categoría destino\n- `400` sourceId ausente / misma categoría / distinto tipo / no existe"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Registros",
+      "item": [
+        {
+          "name": "Mis registros",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const list = pm.response.json();",
+                  "if (Array.isArray(list) && list.length) {",
+                  "  pm.collectionVariables.set('registroId', list[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/misregistros",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "misregistros"]
+            },
+            "description": "🔒 Registros del usuario autenticado.\n\nRespuesta: `[{ id, concepto, observaciones, tipo, cantidad, categoria, categoria_id, created_at, updated_at }]`."
+          },
+          "response": []
+        },
+        {
+          "name": "Crear registro",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"concepto\": \"Compra semanal\",\n  \"observaciones\": \"Creado desde Postman\",\n  \"categoria_id\": \"{{categoriaId}}\",\n  \"tipo\": \"gasto\",\n  \"cantidad\": 25.5\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", ""]
+            },
+            "description": "🔒 Crea un registro. **`categoria_id` es obligatorio** y debe ser una categoría existente del mismo `tipo`.\n\n- Body: `{ concepto, observaciones, categoria_id, tipo: 'gasto'|'ingreso', cantidad }`\n- `201` → `{ message, newRegistro }`\n- `400` faltan campos / categoria_id no existe / tipo no coincide\n\n`created_at` = `updated_at` = ahora (no hay fecha editable)."
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar registro",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"concepto\": \"Compra semanal (editada)\",\n  \"cantidad\": 31.2\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/{{registroId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "{{registroId}}"]
+            },
+            "description": "🔒 Actualización parcial. Sólo el propietario.\n\n- Body: cualquiera de `{ concepto?, observaciones?, categoria_id? | categoria?, tipo?, cantidad? }`.\n  - `categoria_id` re-enlaza a la maestra y sincroniza el texto.\n  - `categoria` (texto) guarda el texto y pone `categoria_id = NULL`.\n- `200` → `{ message, newRegistro }` · `400` sin campos · `403` no propietario · `404` no encontrado\n\n`updated_at` se actualiza solo."
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar registro",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/{{registroId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "{{registroId}}"]
+            },
+            "description": "🔒 Borra un registro. Sólo el propietario.\n\n- `200 { \"message\": \"Registro deleted successfully\" }` · `403` no propietario · `404` no encontrado"
+          },
+          "response": []
+        },
+        {
+          "name": "Todos los registros",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", ""]
+            },
+            "description": "🔒 `SELECT * FROM registros` — **de todos los usuarios**, sin filtrar. (El frontend usa `/misregistros`.)"
+          },
+          "response": []
+        },
+        {
+          "name": "Registro por id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/{{registroId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "{{registroId}}"]
+            },
+            "description": "🔒 Un registro por id (incluye `user`). Sin comprobación de propiedad.\n\n⚠️ Un id inexistente devuelve `200` con cuerpo vacío, no `404`. Cualquier `GET /api/v1/<algo>` no reconocido cae también aquí."
+          },
+          "response": []
+        },
+        {
+          "name": "Registros por categoría (texto)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/c/Compra",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "c", "Compra"]
+            },
+            "description": "🔒 Registros cuyo campo de texto `categoria` coincide exactamente (todos los usuarios)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Stats",
+      "description": "Todas aceptan rango opcional `?from=YYYY-MM-DD&to=YYYY-MM-DD` (se filtra por `DATE(created_at)`).",
+      "item": [
+        {
+          "name": "Resumen",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stats/resume?from=&to=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "stats", "resume"],
+              "query": [
+                { "key": "from", "value": "", "description": "YYYY-MM-DD (opcional)", "disabled": true },
+                { "key": "to", "value": "", "description": "YYYY-MM-DD (opcional)", "disabled": true }
+              ]
+            },
+            "description": "🔒 Resumen numérico: nº de registros/gastos/ingresos, totales € y categorías moda.\n\n`{ \"Número de registros\", \"Número de gastos\", \"Número de ingresos\", \"Gastos (€)\", \"Ingresos (€)\", \"Categoría moda gastos\", \"Categoría moda ingresos\" }`"
+          },
+          "response": []
+        },
+        {
+          "name": "Gastos por categoría",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stats/cantidadCategoriasGastos?from=&to=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "stats", "cantidadCategoriasGastos"],
+              "query": [
+                { "key": "from", "value": "", "disabled": true },
+                { "key": "to", "value": "", "disabled": true }
+              ]
+            },
+            "description": "🔒 Suma de gastos por categoría, orden desc.\n\n`[{ id, value, label, color }]` — `id` es el uuid de la categoría o `txt:<nombre>` para texto heredado sin enlazar (`color: null`)."
+          },
+          "response": []
+        },
+        {
+          "name": "Ingresos por categoría",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stats/cantidadCategoriasIngresos?from=&to=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "stats", "cantidadCategoriasIngresos"],
+              "query": [
+                { "key": "from", "value": "", "disabled": true },
+                { "key": "to", "value": "", "disabled": true }
+              ]
+            },
+            "description": "🔒 Suma de ingresos por categoría, orden desc. Misma forma que la de gastos."
+          },
+          "response": []
+        },
+        {
+          "name": "Timeline (balance mensual)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stats/timeline?from=2026-01-01&to=2026-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "stats", "timeline"],
+              "query": [
+                { "key": "from", "value": "2026-01-01", "description": "YYYY-MM-DD (opcional)" },
+                { "key": "to", "value": "2026-12-31", "description": "YYYY-MM-DD (opcional)" }
+              ]
+            },
+            "description": "🔒 Serie mensual: `[{ periodo: \"YYYY-MM\", ingresos, gastos, balance }]` con `balance = ingresos - gastos`.\n\nCon `from` y `to` rellena con 0 los meses del rango sin datos. Importes ya numéricos."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

@@ -171,6 +171,10 @@ Las peticiones **sin cabecera `Origin`** (p. ej. `curl`, Postman) se permiten.
 Base: `http://<host>:<PORT>`. Prefijo de la API: `/api/v1`.
 🔒 = requiere cookie `access_token`. Todas las respuestas son JSON.
 
+> **Postman**: importa [`finance-app.postman_collection.json`](./finance-app.postman_collection.json).
+> Rellena la variable `password`, ejecuta `Auth > Signin` (guarda la cookie) y ya
+> puedes lanzar el resto. Los listados rellenan solos `categoriaId` / `registroId`.
+
 ### Salud
 
 | Método | Ruta | Auth | Descripción |
