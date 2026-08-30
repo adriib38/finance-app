@@ -69,6 +69,19 @@ function HeaderApp() {
               </NavLink>
             )}
           </li>
+          <li>
+            {isAuthenticated && (
+              <NavLink
+                id="nav-bot"
+                className={({ isActive }) => {
+                  return isActive ? "isActive" : "";
+                }}
+                to="/bot"
+              >
+                🕵️ Bot
+              </NavLink>
+            )}
+          </li>
           <li>{isAuthenticated && <MenuUser />}</li>
           <li>
           {!isAuthenticated && (

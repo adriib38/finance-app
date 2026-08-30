@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a7c3e1d2-4b5f-4a6c-8e9d-0f1a2b3c4d5e",
     "name": "Finance App API",
-    "description": "Colección de todos los endpoints del backend de Finance App.\n\n**Autenticación**: ejecuta primero `Auth > Signin`. El backend responde con una cookie `access_token` (httpOnly, 1h) que Postman guarda en su cookie jar y reenvía automáticamente al resto de peticiones del mismo dominio. Rellena la variable de colección `password` antes de empezar.\n\n**Variables de colección**:\n- `baseUrl` — host del backend (por defecto `http://localhost:4000`).\n- `username` / `password` — credenciales de la cuenta única `admin`.\n- `categoriaId`, `categoriaIngresoId`, `registroId`, `sourceCategoriaId` — se rellenan solas al ejecutar las peticiones de listado (scripts de Test), o a mano.\n\nRutas: prefijo de la API `/api/v1`. Stats en `/api/v1/stats`, categorías en `/api/v1/categorias`.",
+    "description": "Colección de todos los endpoints del backend de Finance App.\n\n**Autenticación**: ejecuta primero `Auth > Signin`. El backend responde con una cookie `access_token` (httpOnly, 1h) que Postman guarda en su cookie jar y reenvía automáticamente al resto de peticiones del mismo dominio. Rellena la variable de colección `password` antes de empezar.\n\n**Variables de colección**:\n- `baseUrl` — host del backend (por defecto `http://localhost:4000`).\n- `username` / `password` — credenciales de la cuenta única `admin`.\n- `categoriaId`, `categoriaIngresoId`, `registroId`, `sourceCategoriaId` — se rellenan solas al ejecutar las peticiones de listado (scripts de Test), o a mano.\n- `pregunta` — texto para el bot IA.\n\nRutas: prefijo de la API `/api/v1`. Stats en `/api/v1/stats`, categorías en `/api/v1/categorias`, bot IA en `/api/v1/ai`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -12,7 +12,8 @@
     { "key": "categoriaId", "value": "", "type": "string" },
     { "key": "categoriaIngresoId", "value": "", "type": "string" },
     { "key": "registroId", "value": "", "type": "string" },
-    { "key": "sourceCategoriaId", "value": "", "type": "string" }
+    { "key": "sourceCategoriaId", "value": "", "type": "string" },
+    { "key": "pregunta", "value": "¿Cuánto he gastado este mes y en qué categorías?", "type": "string" }
   ],
   "item": [
     {
@@ -434,6 +435,33 @@
               ]
             },
             "description": "🔒 Serie mensual: `[{ periodo: \"YYYY-MM\", ingresos, gastos, balance }]` con `balance = ingresos - gastos`.\n\nCon `from` y `to` rellena con 0 los meses del rango sin datos. Importes ya numéricos."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Bot IA",
+      "description": "Bot que responde preguntas sobre tus datos. Llama a la API de OpenAI con la tool `consultar_bd` (SELECT de solo lectura). Requiere `OPENAI_API_KEY` en el `.env` del backend; si no, devuelve `503`.",
+      "item": [
+        {
+          "name": "Preguntar al bot",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pregunta\": \"{{pregunta}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai/ask",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ai", "ask"]
+            },
+            "description": "🔒 Pregunta en lenguaje natural sobre los datos financieros.\n\n- **Body**: `{ \"pregunta\": string }` (máx. 2000 caracteres). Edita la variable de colección `pregunta`.\n- **Respuestas**:\n  - `200` → `{ respuesta, consultas: [{ sql, filas | error }], finish_reason, iteraciones, truncado_por_iteraciones }`\n  - `400` falta `pregunta` o es demasiado larga\n  - `503` `OPENAI_API_KEY` no configurada\n  - `502` error al llamar a OpenAI"
           },
           "response": []
         }
