@@ -51,7 +51,7 @@ function Bot() {
       id: nextId(),
       role: "bot",
       text:
-        "¡Hola! Soy CashBot, tu asistente financiero. Pregúntame sobre tus gastos, ingresos, categorías o balances y consultaré tus datos por ti.",
+        "¡Hola! Soy Agustín, tu asistente financiero. Pregúntame sobre tus gastos, ingresos, categorías o balances y consultaré tus datos por ti.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -113,7 +113,7 @@ function Bot() {
             🕵️
           </span>
           <div className="bot-header-info">
-            <strong>Agustin</strong>
+            <strong>Agustín</strong>
             <span className="bot-status">● gpt-4o-mini</span>
           </div>
         </header>

@@ -79,7 +79,6 @@ export function MenuUser() {
           <EntidadLi style={{ cursor: "pointer" }}>
             <Link
               to="/categorias"
-              style={{ textDecoration: "none", color: "inherit" }}
               onClick={() => setOpen(false)}
             >
               Categorías
