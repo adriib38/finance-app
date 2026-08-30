@@ -51,14 +51,6 @@
     color: green;
 }
 
-#nav-register {
-    display: flex;
-    justify-content: center;
-    width: 50px;
-    border: blue 1px solid;
-    color: blue;
-}
-
 #header-navbar a:hover {
     background: hsl(30, 100%, 98%);
 }

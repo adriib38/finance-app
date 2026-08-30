@@ -1,29 +1,5 @@
 import { API_BASE_URL } from "../env";
 
-export const register = async (requestRegister) => {
-  const url = `${API_BASE_URL}/signup`;
-  try {
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        username: requestRegister.username,
-        password: requestRegister.password,
-      }),
-      credentials: "include",
-    });
-
-    const data = await resp.json();
-
-    return { status: resp.status, data };
-  } catch (error) {
-    console.error("Error fetching stats:", error);
-    throw error;
-  }
-};
-
 export const login = async (requestLogin) => {
   const url = `${API_BASE_URL}/signin`;
   try {
@@ -74,36 +50,6 @@ export const user = async () => {
   try {
     const resp = await fetch(url, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-    });
-
-    if (resp.status == 403) {
-      return { status: resp.status, data: null };
-    }
-
-    if (!resp.ok) {
-      return { status: resp.status, data: null };
-    }
-
-    const data = await resp.json();
-
-    return { status: resp.status, data };
-
-  } catch (error) {
-    return { status: 500, data: null };
-  }
-
-};
-
-export const deleteUser = async () => {
-  const url = `${API_BASE_URL}/delete`;
-
-  try {
-    const resp = await fetch(url, {
-      method: "DELETE",
       headers: {
         "Content-Type": "application/json",
       },

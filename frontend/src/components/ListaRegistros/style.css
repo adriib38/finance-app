@@ -16,3 +16,14 @@
 #btn-mode-edit.inactive {
     background: rgb(165, 196, 183);
 }
+
+.lista-filtros {
+    margin-bottom: 20px;
+}
+
+.lista-filtros-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}

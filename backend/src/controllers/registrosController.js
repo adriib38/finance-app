@@ -1,4 +1,23 @@
 const Registro = require("../models/Registro");
+const Categoria = require("../models/Categoria");
+
+// Resuelve el par (categoria_id, categoria texto) a partir de lo que llegue en
+// el body. Si viene categoria_id se usa su nombre como texto denormalizado.
+async function resolveCategoria(body, userUuid) {
+  if (body.categoria_id) {
+    const cat = await Categoria.getById(body.categoria_id, userUuid);
+    if (!cat) {
+      const err = new Error("categoria_id no encontrada");
+      err.status = 400;
+      throw err;
+    }
+    return { categoria_id: cat.id, categoria: cat.nombre, tipo: cat.tipo };
+  }
+  if (body.categoria !== undefined) {
+    return { categoria_id: null, categoria: body.categoria };
+  }
+  return {};
+}
 
 
 const getAllRegistros = (req, res) => {
@@ -37,7 +56,7 @@ const getRegistroByCategory = (req, res) => {
   });
 };
 
-const updateRegistro = (req, res) => {
+const updateRegistro = async (req, res) => {
   const { body } = req;
   const { id } = req.params;
   const userIdFromToken = req.userUuid;
@@ -46,6 +65,7 @@ const updateRegistro = (req, res) => {
     !body.concepto &&
     !body.observaciones &&
     !body.categoria &&
+    !body.categoria_id &&
     !body.tipo &&
     !body.cantidad
   ) {
@@ -64,8 +84,12 @@ const updateRegistro = (req, res) => {
     newRegistro.observaciones = body.observaciones;
   }
 
-  if (body.categoria !== undefined) {
-    newRegistro.categoria = body.categoria;
+  try {
+    const cat = await resolveCategoria(body, userIdFromToken);
+    if (cat.categoria !== undefined) newRegistro.categoria = cat.categoria;
+    if (cat.categoria_id !== undefined) newRegistro.categoria_id = cat.categoria_id;
+  } catch (e) {
+    return res.status(e.status || 500).json({ message: e.message });
   }
 
   if (body.tipo !== undefined) {
@@ -75,7 +99,7 @@ const updateRegistro = (req, res) => {
   if (body.cantidad !== undefined) {
     newRegistro.cantidad = body.cantidad;
   }
-  
+
   Registro.getRegistroById(id, (err, registro) => {
     if (err) {
       return res.status(500).json({ message: "Error getting registro", error: err });
@@ -103,22 +127,36 @@ const updateRegistro = (req, res) => {
   });
 };
 
-const createRegistro = (req, res) => {
+const createRegistro = async (req, res) => {
   const { body } = req;
   if (
     !body.concepto ||
     !body.observaciones ||
-    !body.categoria ||
+    !body.categoria_id ||
     !body.tipo ||
     !body.cantidad
   ) {
-    return res.status(400).json({ message: "No fields provided for update" });
+    return res.status(400).json({ message: "Faltan campos obligatorios" });
+  }
+
+  let cat;
+  try {
+    cat = await resolveCategoria(body, req.userUuid);
+  } catch (e) {
+    return res.status(e.status || 500).json({ message: e.message });
+  }
+
+  if (cat.tipo && cat.tipo !== body.tipo) {
+    return res
+      .status(400)
+      .json({ message: "La categoría no corresponde al tipo del registro" });
   }
 
   const newRegistro = {
     concepto: body.concepto,
     observaciones: body.observaciones,
-    categoria: body.categoria,
+    categoria: cat.categoria,
+    categoria_id: cat.categoria_id ?? null,
     tipo: body.tipo,
     cantidad: body.cantidad,
   };

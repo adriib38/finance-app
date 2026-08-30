@@ -3,8 +3,6 @@ import { getRegistros as getRegistrosService } from "../services/RegistrosServic
 import { deleteRegistro as deleteRegistroService } from "../services/RegistrosService";
 import { createRegistro as createRegistroService } from "../services/RegistrosService";
 import { updateRegistro as updateRegistroService } from "../services/RegistrosService";
-import { getStatsResume as getStatsResumeService } from "../services/RegistrosService";
-import { getStatsCantidadCategoria as getStatsCantidadCategoriasService } from "../services/RegistrosService";
 import { AuthContext } from "../context/AuthContext";
 
 export const RegistrosContext = createContext();
@@ -15,40 +13,6 @@ export function RegistrosContextProvider(props) {
   const [registros, setRegistros] = useState([]);
   const [feedback, setFeedback] = useState({ message: "", type: "", key: 0 });
   const [numRegistros, setNumRegistros] = useState(0);
-
-  const [cantidadCategoriasGastos, setCantidadCategoriasGastos] = useState([]);
-  const [cantidadCategoriasIngresos, setCantidadCategoriasIngresos] = useState(
-    []
-  );
-
-  const getStatsCantidadCategoria = async (t) => {
-    try {
-      const resp = await getStatsCantidadCategoriasService(t);
-      if (resp.status === 200) {
-        if (resp.data) {
-          const formattedData = resp.data.map((item) => ({
-            id: item.id,
-            value: item.value,
-            label: item.label,
-          }));
-
-          if (t == "gastos") {
-            setCantidadCategoriasGastos(formattedData);
-          }
-          if (t == "ingresos") {
-            setCantidadCategoriasIngresos(formattedData);
-          }
-        }
-      }
-    } catch (error) {
-      setFeedback({
-        message: `Error al obtener registros`,
-        type: "error",
-        key: Date.now(),
-      });
-      return false;
-    }
-  };
 
   const getRegistros = async () => {
     try {
@@ -70,26 +34,8 @@ export function RegistrosContextProvider(props) {
   useEffect(() => {
     if (isAuthenticated) {
       getRegistros();
-      getStatsCantidadCategoria("gastos");
-      getStatsCantidadCategoria("ingresos");
     }
   }, [isAuthenticated]);
-
-  const getStatsResume = async () => {
-    try {
-      const resp = await getStatsResumeService();
-      if (resp.status === 200) {
-        setRegistros(resp.data);
-      }
-    } catch (error) {
-      setFeedback({
-        message: `Error al obtener registros`,
-        type: "error",
-        key: Date.now(),
-      });
-      return false;
-    }
-  };
 
   const deleteRegistro = async (id, concepto) => {
     try {
@@ -165,13 +111,10 @@ export function RegistrosContextProvider(props) {
   return (
     <RegistrosContext.Provider
       value={{
-        cantidadCategoriasGastos,
-        cantidadCategoriasIngresos,
         registros,
         deleteRegistro,
         crearRegistro,
         updateRegistro,
-        getStatsResume,
         numRegistros,
         feedback,
       }}

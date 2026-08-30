@@ -5,8 +5,8 @@ function validateUserFields(user) {
       errors.push('Username must be a string between 3 and 20 characters');
     }
   
-    if (!user.password || typeof user.password !== 'string' || user.password.length < 8 || user.password.length > 15) {
-      errors.push('Password must be a string between 8 and 15 characters');
+    if (!user.password || typeof user.password !== 'string' || user.password.length < 8 || user.password.length > 128) {
+      errors.push('Password must be a string between 8 and 128 characters');
     }
   
     return {

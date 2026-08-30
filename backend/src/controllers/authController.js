@@ -4,7 +4,7 @@ const { validateUserFields } = require("../utils/validators");
 
 require("dotenv").config();
 
-const signup = async (req, res) => {
+const signin = async (req, res) => {
   let { username, password } = req.body;
 
   if (!username | !password) {
@@ -13,61 +13,7 @@ const signup = async (req, res) => {
     });
   }
 
-  //Format the data
   username = username.toLowerCase().trim().replace(/\s+/g, "");
-  password = password.trim();
-  const user = new User({ username, password });
-
-  const { valid, errors } = validateUserFields(user);
-  if (!valid) {
-    return res.status(400).json({
-      message: errors,
-    });
-  }
-
-  password = await user.encryptPassword();
-
-  User.createUser(user, (err, results) => {
-    if (!err) {
-      // Create a token
-      let token = jwt.sign({ id: user.uuid }, process.env.JWT_SECRET, {
-        expiresIn: "1h",
-      });
-
-      return res
-        .status(201)
-        .cookie("access_token", token, {
-          httpOnly: true, //Read cookie only in server (no js)
-          secure: true,
-          sameSite: "strict",
-          maxAge: 1000 * 60 * 60,
-        })
-        .json({
-          message: "User created",
-          user: user,
-        });
-    } else {
-      // User already exists
-      if (err.code === "ER_DUP_ENTRY") {
-        return res.status(409).json({ message: err.sqlMessage });
-      }
-
-      // Send the error if there was one while creating the user
-      return res
-        .status(500)
-        .json({ message: "Error creating user", error: err });
-    }
-  });
-};
-
-const signin = async (req, res) => {
-  const { username, password } = req.body;
-
-  if (!username | !password) {
-    return res.status(400).json({
-      message: "Username and password required.",
-    });
-  }
 
   const { valid, errors } = validateUserFields({ username, password });
   if (!valid) {
@@ -141,25 +87,8 @@ const getUserByUuid = async (req, res) => {
   });
 };
 
-const deleteUserByUuid = async (req, res) => {
-  let uuid = req.userUuid;
-  User.deleteUserByUuid(uuid, async (err, delet) => {
-    if (err) {
-      return res
-        .status(500)
-        .json({ message: "Error deleting user", error: err});
-    }
-
-    if (delet) {
-      res.status(200).json({ message: "User delete successful" });
-    }    
-  })
-}
-
 module.exports = {
-  signup,
   signin,
   signout,
   getUserByUuid,
-  deleteUserByUuid
 };

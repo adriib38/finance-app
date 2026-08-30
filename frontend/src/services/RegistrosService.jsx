@@ -1,7 +1,16 @@
 import { API_BASE_URL } from "../env";
 
-export const getStatsCantidadCategoria = async (type) => {
-    const url = `${API_BASE_URL}/stats/cantidadCategorias${type}`;
+// Serializa un rango de fechas opcional { from, to } (YYYY-MM-DD) a query string.
+const rangeQuery = (range = {}) => {
+    const p = new URLSearchParams();
+    if (range.from) p.set("from", range.from);
+    if (range.to) p.set("to", range.to);
+    const s = p.toString();
+    return s ? `?${s}` : "";
+};
+
+export const getStatsCantidadCategoria = async (type, range) => {
+    const url = `${API_BASE_URL}/stats/cantidadCategorias${type}${rangeQuery(range)}`;
     try {
         const resp = await fetch(url, {
             method: "GET",
@@ -22,8 +31,30 @@ export const getStatsCantidadCategoria = async (type) => {
     }
 }
 
-export const getStatsResume = async () => {
-    const url = `${API_BASE_URL}/stats/resume`;
+export const getStatsResume = async (range) => {
+    const url = `${API_BASE_URL}/stats/resume${rangeQuery(range)}`;
+    try {
+        const resp = await fetch(url, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+        });
+        if (!resp.ok) {
+            throw new Error('Failed to fetch stats');
+        }
+        const data = await resp.json();
+        return { status: resp.status, data };
+    } catch(error) {
+        console.error('Error fetching stats:', error);
+        throw error;
+    }
+}
+
+// Serie mensual [{ periodo, ingresos, gastos, balance }] ya agregada en backend.
+export const getStatsTimeline = async (range) => {
+    const url = `${API_BASE_URL}/stats/timeline${rangeQuery(range)}`;
     try {
         const resp = await fetch(url, {
             method: "GET",
