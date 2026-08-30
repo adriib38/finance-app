@@ -60,6 +60,16 @@
 }
 
 /* --- Mensajes --- */
+#nav-bot{
+  background: rgb(59, 18, 241);
+  color: #fff;
+  opacity: .9;
+}
+
+#nav-bot:hover {
+  opacity: 1;
+}
+
 .bot-messages {
   flex: 1;
   overflow-y: auto;

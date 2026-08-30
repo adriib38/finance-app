@@ -14,8 +14,13 @@
     padding: 20px;
 }
 
-.nav-right a,
-.nav-right button {
+#user-menu > li{
+    border: none;
+
+}
+
+#header-navbar .nav-right a,
+#header-navbar .nav-right button {
     padding: 10px 20px;
     border-radius: 6px;
     border: 3px solid whitesmoke;
@@ -31,6 +36,12 @@
     background: rgb(59, 18, 241)!important;
     color: #fff;
     opacity: .9;
+}
+
+/* doble id para ganar en especificidad a "#header-navbar .nav-right a" */
+#header-navbar #nav-categorias {
+    padding: 0;
+    border: none;
 }
 
 #nav-crear-registro:hover {
