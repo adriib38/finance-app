@@ -4,14 +4,14 @@ import { Routes, Route, BrowserRouter } from "react-router-dom";
 import "./App.css";
 import "./index.css";
 import CrearRegistro from "./components/CrearRegistro/CrearRegistro";
+import Categorias from "./components/Categorias/Categorias";
 import { RegistrosContextProvider } from "./context/RegistrosContext";
+import { CategoriasContextProvider } from "./context/CategoriasContext";
 import SigninForm from "./components/auth/SigninForm";
 import HeaderApp from "./components/Header/HeaderApp";
 import { AuthContextProvider } from "./context/AuthContext";
 import ProtectedRoute from "./shared/ProtectedRoute";
 import PublicRoute from "./shared/PublicRoute";
-import SignupForm from "./components/auth/SignupForm";
-import UserProfile from "./components/userProfile/UserProfile";
 
 function App() {
 
@@ -22,12 +22,13 @@ function App() {
   return (
     <BrowserRouter>
       <AuthContextProvider>
+        <CategoriasContextProvider>
         <RegistrosContextProvider>
           <HeaderApp />
           <div id="content">
             <Routes>
-              <Route 
-                path="/" 
+              <Route
+                path="/"
                 element={
                   <ProtectedRoute>
                     <Inicio />
@@ -51,6 +52,14 @@ function App() {
                 }
               />
               <Route
+                path="/categorias"
+                element={
+                  <ProtectedRoute>
+                    <Categorias />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/login"
                 element={
                   <PublicRoute>
@@ -58,26 +67,11 @@ function App() {
                   </PublicRoute>
                 }
               />
-              <Route
-                path="/register"
-                element={
-                  <PublicRoute>
-                    <SignupForm />
-                  </PublicRoute>
-                }
-              />
-              <Route
-                path="/usr"
-                element={
-                  <ProtectedRoute>
-                    <UserProfile />
-                  </ProtectedRoute>
-                }
-              />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
         </RegistrosContextProvider>
+        </CategoriasContextProvider>
       </AuthContextProvider>
     </BrowserRouter>
   );

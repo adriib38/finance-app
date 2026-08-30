@@ -4,6 +4,8 @@
 
 input[type=text],
 input[type=password],
+input[type=number],
+input[type=date],
 select,
 textarea
 {
@@ -15,6 +17,31 @@ textarea
     border: 1px solid #ccc;
     border-radius: 4px;
     box-sizing: border-box;
+}
+
+#form-crear-registro .form-row {
+    display: flex;
+    gap: 20px;
+}
+
+#form-crear-registro .form-row .form-group {
+    flex: 1;
+}
+
+#form-crear-registro fieldset.radio-group {
+    margin: 8px 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+#form-crear-registro .hint {
+    margin: 4px 0 8px;
+    font-size: 0.85em;
+}
+
+#form-crear-registro select:disabled {
+    background: #f4f4f4;
+    color: #999;
 }
   
 button[type=submit] {

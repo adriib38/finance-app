@@ -33,32 +33,30 @@ class Registro {
   }
 
   static updateRegistro(id, newRegistro, callback) {
-    const { concepto, observaciones, categoria, tipo, cantidad } = newRegistro;
+    const columns = [
+      "concepto",
+      "observaciones",
+      "categoria",
+      "categoria_id",
+      "tipo",
+      "cantidad",
+    ];
 
-    const updateFields = [
-      concepto !== undefined ? "concepto = ?" : null,
-      observaciones !== undefined ? "observaciones = ?" : null,
-      categoria !== undefined ? "categoria = ?" : null,
-      tipo !== undefined ? "tipo = ?" : null,
-      cantidad !== undefined ? "cantidad = ?" : null,
-    ]
-      .filter((field) => field !== null)
-      .join(", ");
+    const sets = [];
+    const params = [];
+    for (const col of columns) {
+      if (newRegistro[col] !== undefined) {
+        sets.push(`${col} = ?`);
+        params.push(newRegistro[col]);
+      }
+    }
 
-    const query = `
-        UPDATE registros
-        SET ${updateFields}
-        WHERE id = ?;
-    `;
+    if (sets.length === 0) {
+      return callback(null, { affectedRows: 0 });
+    }
 
-    const params = [
-      concepto,
-      observaciones,
-      categoria,
-      tipo,
-      cantidad,
-      id,
-    ].filter((param) => param !== undefined);
+    params.push(id);
+    const query = `UPDATE registros SET ${sets.join(", ")} WHERE id = ?`;
 
     db.query(query, params, (err, results) => {
       callback(err, results);
@@ -68,18 +66,27 @@ class Registro {
   static createRegistro(newRegistro, userUuid, callback) {
     const nuevoId = uuid();
 
-    const { concepto, observaciones, categoria, tipo, cantidad } = newRegistro;
+    const {
+      concepto,
+      observaciones,
+      categoria,
+      categoria_id = null,
+      tipo,
+      cantidad,
+    } = newRegistro;
+
     const query =
-      "INSERT INTO registros (id, concepto, observaciones, categoria, tipo, cantidad, user) VALUES (?, ?, ?, ?, ?, ?, ?)";
+      "INSERT INTO registros (id, concepto, observaciones, categoria, categoria_id, tipo, cantidad, user) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
     const params = [
       nuevoId,
       concepto,
       observaciones,
       categoria,
+      categoria_id,
       tipo,
       cantidad,
-      userUuid
+      userUuid,
     ];
 
     db.query(query, params, (err, results) => {
@@ -92,9 +99,10 @@ class Registro {
           concepto,
           observaciones,
           categoria,
+          categoria_id,
           tipo,
           cantidad,
-          userUuid
+          userUuid,
         };
         callback(null, nuevoRegistro);
       }
@@ -115,7 +123,7 @@ class Registro {
   }
 
   static getRegistrosFromUser(userUuid, callback) {
-    const query = `SELECT id, concepto, observaciones, tipo, cantidad, categoria, created_at FROM registros WHERE user = ?`;
+    const query = `SELECT id, concepto, observaciones, tipo, cantidad, categoria, categoria_id, created_at, updated_at FROM registros WHERE user = ?`;
     db.query(query, userUuid, (err, results) => {
       if(err) {
         callback(err, null);

@@ -4,13 +4,10 @@ const router = express.Router();
 
 const verifyToken = require("../../controllers/middlewares/verifyJWT.js");
 
-//Registros endpoints
+// App de un solo usuario: no hay alta ni baja de cuentas.
 router
-  .post("/signup", authController.signup)
   .post("/signin", authController.signin)
   .post("/signout", authController.signout)
   .get("/user", verifyToken, authController.getUserByUuid)
-  .delete("/delete", verifyToken, authController.deleteUserByUuid)
-
 
 module.exports = router;

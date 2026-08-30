@@ -8,5 +8,6 @@ router
     .get("/resume", verifyToken, statsRegistrosController.getStats)
     .get("/cantidadCategoriasGastos", verifyToken, statsRegistrosController.getCantidadCategoriasGastos)
     .get("/cantidadCategoriasIngresos", verifyToken, statsRegistrosController.getCantidadCategoriasIngresos)
+    .get("/timeline", verifyToken, statsRegistrosController.getTimeline)
 
 module.exports = router;

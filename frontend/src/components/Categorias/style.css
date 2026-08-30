@@ -1,0 +1,60 @@
+.cat-page {
+  padding: 20px;
+  max-width: 760px;
+}
+
+.cat-intro {
+  color: #555;
+  margin-top: -8px;
+  margin-bottom: 20px;
+}
+
+.cat-nueva {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.cat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cat-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.cat-row--inactive {
+  opacity: 0.55;
+}
+
+.cat-color {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.cat-nombre {
+  min-width: 160px;
+  flex: 1;
+}
+
+.cat-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}

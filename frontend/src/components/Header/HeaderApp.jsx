@@ -56,18 +56,24 @@ function HeaderApp() {
               </NavLink>
             )}
           </li>
+          <li>
+            {isAuthenticated && (
+              <NavLink
+                id="nav-categorias"
+                className={({ isActive }) => {
+                  return isActive ? "isActive" : "";
+                }}
+                to="/categorias"
+              >
+                Categorías
+              </NavLink>
+            )}
+          </li>
           <li>{isAuthenticated && <MenuUser />}</li>
           <li>
           {!isAuthenticated && (
             <NavLink id="nav-login" to="/login">
               Login
-            </NavLink>
-          )}
-          </li>
-          <li>
-          {!isAuthenticated && (
-            <NavLink id="nav-register" to="/register">
-              Register
             </NavLink>
           )}
           </li>

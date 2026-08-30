@@ -1,57 +1,69 @@
 import { useEffect, useState, useContext } from "react";
 import StatsCard from "./StatsCard";
-import Dashboard from "../shared/Dashboard"
-import { getStatsResume as getStatsResumeService } from "../services/RegistrosService"
-import { RegistrosContextProvider } from '../context/RegistrosContext';
-import { AuthContext } from "../context/AuthContext";
+import HomeDateFilter from "./HomeDateFilter";
+import Dashboard from "../shared/Dashboard";
+import { getStatsResume as getStatsResumeService } from "../services/RegistrosService";
+import { HomeFilterProvider, HomeFilterContext } from "../context/HomeFilterContext";
+//import { AuthContext } from "../context/AuthContext";
 import SkeletonGrid from "../shared/SkeletonGrid";
 
-function Inicio() {
+const styles = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "30px",
+  marginTop: "20px",
+};
+
+function ResumenCards() {
+  const { range } = useContext(HomeFilterContext);
   const [statsResume, setStatsResume] = useState(false);
-  const { userInfo } = useContext(AuthContext);
-  
-  const getStatsResume = async () => {
-    try {
-      const resp = await getStatsResumeService();
-      if(resp.status == 200) {
-        setStatsResume(resp.data)
-      }
-    } catch (error) {
-      console.error("Failed to fetch stats resume:", error);
-    }
-  };
 
   useEffect(() => {
-    getStatsResume();
-  }, []);
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await getStatsResumeService(range);
+        if (!cancelled && resp.status === 200) setStatsResume(resp.data);
+      } catch (error) {
+        console.error("Failed to fetch stats resume:", error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [range]);
 
-  const styles = {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "30px",
-    marginTop: "40px",
-  };
+  if (!statsResume) return <SkeletonGrid />;
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>Buenos días { userInfo.username }, tu resumen financiero.</h1>
+    <section style={styles}>
+      {Object.entries(statsResume).map(([key, value]) => (
+        <StatsCard key={key} title={key} value={value} />
+      ))}
+    </section>
+  );
+}
 
-      {
-        !statsResume ? (<SkeletonGrid />)
-        :
-        (
-          <section style={styles}>
-            {Object.entries(statsResume).map(([key, value]) => (
-              <StatsCard key={key} title={key} value={value} />
-            ))}
-          </section>
-        )
-      }
+function Inicio() {
+  //const { userInfo } = useContext(AuthContext);
 
-      <RegistrosContextProvider>
+  return (
+    <div style={{ padding: "20px" }}>
+      <h1>
+        {/* saludar dependiendo la hora del día */}
+        {(() => {
+          const hour = new Date().getHours();
+          if (hour < 12) return "Buenos días ☀️";
+          if (hour < 18) return "Buenas tardes 🌤️";
+          return "Buenas noches 🌙";
+        })()}{" "}
+        tu resumen financiero.</h1>
+
+      <HomeFilterProvider>
+        <HomeDateFilter />
+        <ResumenCards />
         <Dashboard />
-      </RegistrosContextProvider>
-
+      </HomeFilterProvider>
     </div>
   );
 }

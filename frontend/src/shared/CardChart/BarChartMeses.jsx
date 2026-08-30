@@ -1,91 +1,48 @@
 import { BarChart } from "@mui/x-charts/BarChart";
 import { axisClasses } from "@mui/x-charts/ChartsAxis";
-import { useContext } from "react";
-import { RegistrosContext } from "../../context/RegistrosContext";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { monthLabel } from "../../utils/dateRange";
 import "./index.css";
-
 
 const chartSetting = {
   height: 450,
   sx: {
-    [`.${axisClasses.left} .${axisClasses.label}`]: {
-    
-    },
+    [`.${axisClasses.left} .${axisClasses.label}`]: {},
   },
 };
 
-const valueFormatter = (cantidad) => `${cantidad}€`;
+const valueFormatter = (cantidad) =>
+  `${Number(cantidad || 0).toLocaleString("es-ES", { maximumFractionDigits: 0 })} €`;
 
-function BarChartMeses() {
-  const [yearSelected, setYearSelected] = useState(new Date().getFullYear());
-
-  const handleSelectedYear = (sum) => {
-    if (sum) setYearSelected(yearSelected + 1);
-    else setYearSelected(yearSelected - 1);
-    console.log(yearSelected);
-  };
-
-  const { registros } = useContext(RegistrosContext);
-
-  const allMonths = useMemo(() => {
-    const months = [];
-    for (let i = 0; i < 12; i++) {
-      const month = new Date(yearSelected, i).toLocaleString("default", {
-        month: "short",
-        year: "numeric",
-      });
-      months.push(month);
-    }
-    return months;
-  }, [yearSelected]);
-
-  const dataGroupedByMonth = useMemo(() => {
-    const groupedData = {};
-
-    registros.forEach((registro) => {
-      const month = new Date(registro.created_at).toLocaleString("default", {
-        month: "short",
-        year: "numeric",
-      });
-
-      if (!groupedData[month]) {
-        groupedData[month] = { gasto: 0, ingreso: 0 };
-      }
-
-      if (registro.tipo === "gasto") {
-        groupedData[month].gasto += registro.cantidad;
-      } else if (registro.tipo === "ingreso") {
-        groupedData[month].ingreso += registro.cantidad;
-      }
-    });
-
-    return allMonths.map((month) => ({
-      month,
-      gasto: groupedData[month]?.gasto || 0,
-      ingreso: groupedData[month]?.ingreso || 0,
-    }));
-  }, [registros, allMonths]);
+// Recibe la serie mensual ya agregada en backend: [{ periodo, ingresos, gastos, balance }]
+function BarChartMeses({ data = [] }) {
+  const { dataset, titulo } = useMemo(() => {
+    const years = [...new Set(data.map((d) => d.periodo.slice(0, 4)))];
+    const multiYear = years.length > 1;
+    return {
+      titulo: multiYear
+        ? `${years[0]}–${years[years.length - 1]}`
+        : years[0] || "",
+      dataset: data.map((d) => ({
+        month: monthLabel(d.periodo, multiYear),
+        gasto: d.gastos,
+        ingreso: d.ingresos,
+      })),
+    };
+  }, [data]);
 
   return (
     <article id="barChartMeses" className="cardChart-article">
       <header className="cardChart-header">
-        <p>Comparación {yearSelected}</p>       
-        <button onClick={() => handleSelectedYear(true)}>+</button>
-        <button onClick={() => handleSelectedYear(false)}>-</button>
+        <p>Comparación por meses · {titulo}</p>
       </header>
 
       <BarChart
-        dataset={dataGroupedByMonth}
+        dataset={dataset}
         xAxis={[{ scaleType: "band", dataKey: "month" }]}
         series={[
           { dataKey: "gasto", label: "Gasto", color: "#e0274c", valueFormatter },
-          {
-            dataKey: "ingreso",
-            label: "Ingreso",
-            color: "#27e058",
-            valueFormatter,
-          },
+          { dataKey: "ingreso", label: "Ingreso", color: "#27e058", valueFormatter },
         ]}
         {...chartSetting}
       />

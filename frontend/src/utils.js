@@ -12,11 +12,11 @@ const validatePassword = (password) => {
     return false;
   }
   const length = password.length;
-  return length >= 8 && length <= 15;
+  return length >= 8 && length <= 128;
 };
 
 const validateRepeatPassword = (pass, reppass) => {
   return pass === reppass ? true : false;
 }
 
-export { validateUsername, validatePassword, validateRepeatPassword};
+export { validateUsername, validatePassword, validateRepeatPassword };

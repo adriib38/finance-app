@@ -1,4 +1,5 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 
 function EntidadLi({children, style, ...rest}) {
@@ -8,20 +9,37 @@ function EntidadLi({children, style, ...rest}) {
 
   const combinatedStyle = {...liStyle, ...style}
   return <li style={combinatedStyle}{...rest}>{children}</li>
- 
+
 }
 
 export function MenuUser() {
   const { userInfo, logout, loading } = useContext(AuthContext);
   const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
 
-  const srcImage = `https://api.dicebear.com/9.x/avataaars/svg?seed=${userInfo.username}`;
+  // Cerrar el menú al hacer clic fuera de él.
+  useEffect(() => {
+    if (!open) return;
+
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  // Avatar genérico por defecto (silueta "mystery person" de Gravatar).
+  const srcImage = "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&s=200";
 
 
   const imgProfileStyle = {
     borderRadius: "50%",
     width: 50,
     border: "1px solid blue",
+    cursor: "pointer",
   };
 
   const ulStyle = {
@@ -33,27 +51,22 @@ export function MenuUser() {
     background: "#fff",
     border: "3px solid whitesmoke",
     borderRadius: 6,
-    width: "6%"
+    width: "max-content",
+    minWidth: "8%",
+    zIndex: 10,
   }
 
-  if (loading) {  
+  if (loading) {
     return <div>...</div>;
   }
 
   const handleClick = () => {
-    setOpen(!open);
+    setOpen((prev) => !prev);
   };
 
-  document.addEventListener("click", (e) =>{
-    let ele = e.explicitOriginalTarget
-    if(open && ele.id != "user-menu" && ele.id != "img-user"){
-      setOpen(false)
-    }
-  })
-
   return (
-    <div>
-      <img 
+    <div ref={menuRef}>
+      <img
         id="img-user"
         onClick={handleClick} style={imgProfileStyle} src={srcImage}></img>
       {open && (
@@ -63,8 +76,18 @@ export function MenuUser() {
         >
           <EntidadLi>@{userInfo.username}</EntidadLi>
           <hr></hr>
+          <EntidadLi style={{ cursor: "pointer" }}>
+            <Link
+              to="/categorias"
+              style={{ textDecoration: "none", color: "inherit" }}
+              onClick={() => setOpen(false)}
+            >
+              Categorías
+            </Link>
+          </EntidadLi>
+          <hr></hr>
           <EntidadLi style={{ color: "red", cursor: "pointer" }} onClick={logout}>
-              Logout 
+              Logout
           </EntidadLi>
         </ul>
       )}
