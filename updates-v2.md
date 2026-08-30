@@ -15,6 +15,7 @@ necesariamente el orden de implementación (ver [Roadmap sugerido](#roadmap-suge
 | Feature 3 — Modo oscuro | ⏳ Pendiente |
 | Feature 4 — Filtro de fechas en la home | ✅ Implementado |
 | Feature 5 — Dockerizar la app | ⏳ Pendiente |
+| Feature 7 — Bot IA (OpenAI + tool `consultar_bd`) | ✅ Implementado (backend + chat `/bot`) |
 
 > **Tras hacer pull hay que reiniciar el backend**: aplica las migraciones solo
 > y siembra las categorías base. Las columnas nuevas tienen `DEFAULT`, así que
@@ -351,6 +352,123 @@ Objetivo: `docker compose up` levanta DB + backend + frontend.
 
 ---
 
+## Feature 7 — Bot IA sobre tus datos (MVP)
+
+**Estado: implementado** (backend + chat `/bot`).
+
+Un chat al que preguntar en lenguaje natural sobre los datos financieros. Usa la
+**API de OpenAI** (Chat Completions + function calling) con **una herramienta
+normal** (`consultar_bd`) que ejecuta **SELECT de solo lectura** contra la BD.
+Es un *workflow con tool use*.
+
+> Decisión: **opción A — tool normal de la API** (no MCP). El contrato que ve el
+> modelo (una tool `consultar_bd(sql)`) es idéntico si más adelante se mueve a
+> un servidor MCP, así que empezar así no cierra puertas.
+
+### Flujo de una pregunta
+
+1. `POST /api/v1/ai/ask { pregunta }` (🔒).
+2. Backend llama a `chat.completions.create` con `tools: [consultar_bd]` y un
+   system prompt con el **esquema de la BD** + reglas del dominio.
+3. El modelo devuelve `tool_calls` → `{ sql: "SELECT ..." }`.
+4. Backend **valida que es un SELECT**, lo ejecuta con el pool de solo lectura,
+   devuelve las filas como mensaje `role: "tool"` (puede encadenar varias).
+5. El modelo redacta la respuesta con esos datos.
+6. Backend responde `{ respuesta, consultas: [{ sql, filas | error }], finish_reason, iteraciones }`.
+
+Bucle manual: hasta que `message.tool_calls` esté vacío, acumulando los mensajes
+`assistant` (con `tool_calls`) y `tool` en el array; tope `MAX_ITERATIONS = 6`.
+
+### Seguridad de la tool `consultar_bd` (solo SELECT)
+
+Defensa en capas:
+
+1. **Usuario MySQL de solo lectura** — `GRANT SELECT ON finance.* TO finance_ro`.
+   Pool nuevo con `DB_RO_USER` / `DB_RO_PASSWORD`; si faltan, cae al usuario
+   principal con un `console.warn`. Es la garantía real. ✅
+2. **`multipleStatements: false`** en ese pool. ✅
+3. **Validación de la SQL** (`src/ai/queryTool.js`): tras quitar literales y
+   comentarios — una sola sentencia, empieza por `SELECT` / `WITH`, sin `;`
+   internos, lista negra de operaciones de escritura/DDL/`SET`/`OUTFILE`, sin
+   `information_schema` / `mysql` / etc., y sin `users` + `password` juntos.
+   (MVP: regex; robusto: AST con `node-sql-parser`.) ✅
+4. **`LIMIT 500` forzado** si no lo trae + **timeout de 5 s** por consulta. ✅
+5. **Ocultar columnas sensibles**: `users.password` bloqueada en la validación. ✅
+6. (Futuro multi-usuario) forzar `WHERE user = ?` con el uuid del token.
+
+### Contexto para el modelo (system prompt)
+
+- Esquema de `registros`, `categorias`, `users` con tipos (de `schema.sql`).
+- Reglas: `tipo` es `'gasto'|'ingreso'`; `cantidad` es `DECIMAL(12,2)` (llega
+  como string); balance = ingresos − gastos; las fechas van sobre `created_at`.
+- La fecha de hoy.
+- Restricción explícita: "solo puedes leer con `consultar_bd`, que solo admite
+  SELECT".
+
+### Backend — archivos (✅ implementado)
+
+```
+src/ai/
+  openaiClient.js     # cliente OpenAI perezoso + MODEL
+  systemPrompt.js     # esquema + reglas + fecha de hoy
+  dbReadOnly.js       # pool de solo lectura (DB_RO_USER || DB_USER)
+  queryTool.js        # validateSelect() + runSelect()
+  askController.js    # POST /ai/ask: bucle de tool use (Chat Completions)
+src/v1/routes/ai.js   # .post("/ask", verifyToken, ask)
+```
+
+- Dep nueva: `openai` (v7).
+- `.env`: `OPENAI_API_KEY` (si falta → el endpoint responde `503`, el resto de
+  la API va igual), `DB_RO_USER` / `DB_RO_PASSWORD` (recomendadas),
+  `AI_MODEL` (opcional).
+- Montado en `app.js` en `/api/v1/ai` antes de `registros`.
+- Documentado en `backend/README.md`.
+
+### Modelo y coste
+
+- Por defecto **`gpt-4o-mini`** (barato y de sobra para text-to-SQL sobre este
+  esquema). Configurable con `AI_MODEL` (p. ej. `gpt-4o`).
+- Cada pregunta = 1–3 llamadas a la API.
+
+### Frontend (✅ implementado)
+
+- `services/AiService.jsx` → `askBot(pregunta)` (POST `/ai/ask`, `credentials: include`).
+- `components/Bot/Bot.jsx` + `style.css` — chat estilo mensajería con avatar 🕵️
+  ("CashBot"): burbujas usuario/bot, indicador de "escribiendo…", chips de
+  sugerencias iniciales, y por cada respuesta un desplegable **"N consultas
+  SQL"** con el SQL ejecutado y nº de filas (transparencia). Estado local, sin
+  contexto ni historial persistido.
+- Ruta `/bot` (`ProtectedRoute`) en `App.jsx` + enlace "🕵️ Bot" en `HeaderApp`.
+- Errores: `503` → mensaje "el bot no está configurado"; resto → burbuja de error.
+
+### Pasos del MVP
+
+1. ~~Backend: pool de solo lectura + tool `consultar_bd` + `POST /ai/ask`.~~ ✅
+2. ~~Usuario `finance_ro` en la BD + `OPENAI_API_KEY` en `.env`.~~ ✅
+3. ~~Frontend: chat.~~ ✅
+4. Probar end-to-end en la UI (consume API de OpenAI de verdad).
+
+### Riesgos asumidos en el MVP
+
+- **Prompt injection por datos** (un `concepto` con "ignora tus instrucciones…"):
+  puede desviar la *respuesta*, pero con usuario RO + validación SELECT no puede
+  escribir ni salir de los datos del usuario.
+- Coste por pregunta.
+- El modelo puede inventar una columna → el error SQL vuelve como mensaje `tool`
+  y reintenta.
+- Precisión en agregados monetarios (DECIMAL como string) — recordado en el
+  system prompt.
+- Sin rate-limit todavía (solo el tope `MAX_ITERATIONS`).
+
+### Evolución posible (fuera del MVP)
+
+- Historial de conversación multi-turno; streaming de la respuesta.
+- Rate-limit por usuario.
+- Mover `consultar_bd` a un **servidor MCP local (stdio)** + puente en el
+  backend, sin tocar prompt ni UI.
+
+---
+
 ## Cambios transversales / prerequisitos
 
 | Prerequisito | Beneficia a | Estado |
@@ -419,10 +537,11 @@ frontend ya serializan el rango.
    `statsRegistrosService` con rango.~~ ✅
 2. ~~**Feature 6** (normalizar categorías).~~ ✅
 3. ~~**Feature 4** (filtro de fechas).~~ ✅
-4. **Feature 1** (suscripciones) — reusa `categoria_id` y añade el runner de cargos.
-5. **Feature 3** (modo oscuro) — tokens de color, base para lo visual.
-6. **Feature 2** (Wrapped) — encima de stats-con-rango + tokens de color.
-7. **Feature 5** (Docker) — se puede adelantar en paralelo en cualquier momento.
+4. **Feature 7** (bot IA) — MVP con tool normal; reusa `schema.sql` y el pool.
+5. **Feature 1** (suscripciones) — reusa `categoria_id` y añade el runner de cargos.
+6. **Feature 3** (modo oscuro) — tokens de color, base para lo visual.
+7. **Feature 2** (Wrapped) — encima de stats-con-rango + tokens de color.
+8. **Feature 5** (Docker) — se puede adelantar en paralelo en cualquier momento.
 
 ## Preguntas abiertas
 
@@ -435,3 +554,6 @@ frontend ya serializan el rango.
 - Categorías: ¿una categoría es exclusiva de un tipo (`gasto` **o** `ingreso`) o
   se permite compartir (`ambos`)? ¿Se mantiene `registros.categoria` como texto
   denormalizado durante la transición o se migra del todo de golpe?
+- Bot IA: modelo por defecto `gpt-4o-mini` (cambiable con `AI_MODEL`). Validación
+  de SQL con regex en el MVP; ¿pasar a `node-sql-parser`? ¿Historial de
+  conversación o cada pregunta aislada (ahora aislada)?

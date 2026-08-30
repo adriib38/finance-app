@@ -14,6 +14,7 @@ cuentas.
 | Framework | Express 4 |
 | BD | MySQL / MariaDB, acceso con `mysql2` (pool) |
 | Auth | JWT en cookie `httpOnly` (`jsonwebtoken`) + `bcryptjs` |
+| Bot IA | `openai` (Chat Completions + function calling) |
 | Otros | `cors`, `cookie-parser`, `morgan`, `dotenv`, `uuid` |
 
 > `swagger-jsdoc` / `swagger-ui-express` están en `dependencies` pero **no están
@@ -36,6 +37,8 @@ cuentas.
 
 ### Variables de entorno (`backend/.env`, no versionado)
 
+Plantilla completa en [`.env.example`](./.env.example) — `cp .env.example .env` y rellenar.
+
 | Variable | Descripción |
 |---|---|
 | `PORT` | Puerto del servidor (por defecto `3000`) |
@@ -47,6 +50,9 @@ cuentas.
 | `SALT_ROUNDS` | Rondas de `bcrypt` (por defecto `10`) |
 | `ADMIN_USERNAME` | Usuario de la única cuenta (por defecto `admin`) |
 | `ADMIN_PASSWORD` | Contraseña de la única cuenta (**obligatoria**) |
+| `OPENAI_API_KEY` | API key de OpenAI para el bot IA (`/api/v1/ai/ask`). Si falta, ese endpoint responde `503` y el resto de la API funciona igual |
+| `AI_MODEL` | Modelo del bot (por defecto `gpt-4o-mini`) |
+| `DB_RO_USER` / `DB_RO_PASSWORD` | Usuario MySQL de **solo lectura** para la tool SQL del bot. Si faltan, se usa `DB_USER` con un aviso |
 
 ### Arranque
 
@@ -86,8 +92,15 @@ src/
 ├── v1/routes/
 │   ├── auth.js                 # /api/v1  (signin, signout, user)
 │   ├── categorias.js           # /api/v1/categorias
+│   ├── ai.js                   # /api/v1/ai  (bot IA)
 │   ├── registros.js            # /api/v1  (registros)
 │   └── stats.js                # /api/v1/stats
+├── ai/                         # Feature 7: bot IA (OpenAI + tool consultar_bd)
+│   ├── openaiClient.js         # cliente OpenAI perezoso + modelo
+│   ├── systemPrompt.js         # esquema de la BD + reglas
+│   ├── dbReadOnly.js           # pool de solo lectura para la tool
+│   ├── queryTool.js            # validación SELECT + ejecución
+│   └── askController.js        # bucle de tool use (Chat Completions)
 ├── controllers/
 │   ├── authController.js
 │   ├── registrosController.js
@@ -353,6 +366,43 @@ Serie mensual: ingresos, gastos y **balance = ingresos − gastos** por mes.
 - `GROUP BY DATE_FORMAT(created_at, '%Y-%m')`.
 - Si se pasan **`from` y `to`**, rellena con `0` los meses del rango sin datos.
 - Todos los importes ya vienen como números redondeados a 2 decimales.
+
+---
+
+### Bot IA — `/api/v1/ai` 🔒
+
+Pregunta en lenguaje natural sobre tus datos. El backend llama a la API de
+**OpenAI** (Chat Completions + function calling) con **una herramienta**
+(`consultar_bd`) que ejecuta **SELECT de solo lectura** contra la BD; bucle de
+tool use en `src/ai/` (Feature 7 del plan v2).
+
+#### `POST /api/v1/ai/ask`
+
+- **Body**: `{ "pregunta": string }` (máx. 2000 caracteres)
+- **Respuestas**:
+  - `200` →
+    ```json
+    {
+      "respuesta": "Este mes has gastado 1.234,50 € …",
+      "consultas": [
+        { "sql": "SELECT SUM(cantidad) …", "filas": 1, "truncada": false }
+      ],
+      "finish_reason": "stop",
+      "iteraciones": 2,
+      "truncado_por_iteraciones": false
+    }
+    ```
+    `consultas` lista cada SELECT que ejecutó el modelo (o `{ sql, error }` si
+    una falló). `finish_reason: "refusal"` / `"content_filter"` → `respuesta`
+    genérica de rechazo.
+  - `400` → falta `pregunta` o es demasiado larga
+  - `503` → `OPENAI_API_KEY` no configurada
+  - `502` → error al llamar a la API de OpenAI
+
+**Seguridad de la tool** (`src/ai/queryTool.js`): pool con `DB_RO_USER` (solo
+lectura), `multipleStatements: false`, validación de que es un único
+`SELECT`/`WITH` sin operaciones de escritura ni esquemas del sistema ni
+`users.password`, `LIMIT 500` forzado y timeout de 5 s por consulta.
 
 ---
 

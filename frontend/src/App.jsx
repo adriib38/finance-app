@@ -5,6 +5,7 @@ import "./App.css";
 import "./index.css";
 import CrearRegistro from "./components/CrearRegistro/CrearRegistro";
 import Categorias from "./components/Categorias/Categorias";
+import Bot from "./components/Bot/Bot";
 import { RegistrosContextProvider } from "./context/RegistrosContext";
 import { CategoriasContextProvider } from "./context/CategoriasContext";
 import SigninForm from "./components/auth/SigninForm";
@@ -56,6 +57,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Categorias />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/bot"
+                element={
+                  <ProtectedRoute>
+                    <Bot />
                   </ProtectedRoute>
                 }
               />

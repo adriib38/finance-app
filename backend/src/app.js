@@ -41,6 +41,7 @@ app.use("/status", async (req, res) => {
 })
 app.use("/api/v1", require("./v1/routes/auth"));
 app.use("/api/v1/categorias", require("./v1/routes/categorias"));
+app.use("/api/v1/ai", require("./v1/routes/ai"));
 app.use("/api/v1", require("./v1/routes/registros"));
 app.use("/api/v1/stats", require("./v1/routes/stats"));
 
