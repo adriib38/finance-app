@@ -4,10 +4,28 @@
   padding: 20px;
 }
 
+@media (max-width: 600px) {
+  .bot-page {
+    padding: 10px;
+  }
+
+  .bot-window {
+    height: calc(100vh - 110px);
+    height: calc(100dvh - 110px);
+    border-radius: 10px;
+  }
+
+  .bot-row {
+    max-width: 92%;
+  }
+}
+
 .bot-window {
   width: 100%;
   max-width: 760px;
   height: calc(100vh - 160px);
+  /* dvh evita que la barra de direcciones del navegador móvil tape el input */
+  height: calc(100dvh - 160px);
   min-height: 480px;
   display: flex;
   flex-direction: column;

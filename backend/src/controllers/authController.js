@@ -49,8 +49,8 @@ const signin = async (req, res) => {
       res
         .cookie("access_token", token, {
           httpOnly: true, //Read cookie only in server (no js)
-          secure: true,
-          sameSite: "strict",
+          secure: process.env.NODE_ENV === "production", // false en http (localhost/Tailscale), true si se sirve por https
+          sameSite: "lax",
           maxAge: 1000 * 60 * 60,
         })
         .status(200)
