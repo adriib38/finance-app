@@ -1,5 +1,5 @@
 import { RegistrosContext } from "../../context/RegistrosContext";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { Badge } from "@mui/material";
 import { AuthContext } from "../../context/AuthContext";
@@ -8,12 +8,9 @@ import { MenuUser } from "../../components/Header/MenuUser";
 function HeaderApp() {
   const { isAuthenticated } = useContext(AuthContext);
   const { numRegistros } = useContext(RegistrosContext);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const navRightStyle = {
-    display: "flex",
-    alignItems: "center",
-    gap: 30,
-  };
+  const closeMenu = () => setMenuOpen(false);
 
   return (
     <header id="header-navbar">
@@ -23,61 +20,74 @@ function HeaderApp() {
             return isActive ? "isActive" : "";
           }}
           to="/"
+          onClick={closeMenu}
         >
           CashFlow
         </NavLink>
       </h1>
-      <ul>
-        <div className="nav-right" style={navRightStyle}>
-          <li>
-            {isAuthenticated && (
-              <Badge badgeContent={numRegistros} color="secondary">
-                <NavLink
-                  className={({ isActive }) => {
-                    return isActive ? "isActive" : "";
-                  }}
-                  to="/list"
-                >
-                  Registros
-                </NavLink>
-              </Badge>
-            )}
-          </li>
-          <li>
-            {isAuthenticated && (
+
+      <button
+        type="button"
+        className="nav-toggle"
+        aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+        aria-expanded={menuOpen}
+        onClick={() => setMenuOpen((prev) => !prev)}
+      >
+        {menuOpen ? "✕" : "☰"}
+      </button>
+
+      <ul className={`nav-right${menuOpen ? " open" : ""}`}>
+        <li>
+          {isAuthenticated && (
+            <Badge badgeContent={numRegistros} color="secondary">
               <NavLink
-                id="nav-crear-registro"
                 className={({ isActive }) => {
                   return isActive ? "isActive" : "";
                 }}
-                to="/new"
+                to="/list"
+                onClick={closeMenu}
               >
-                Crear registro
+                Registros
               </NavLink>
-            )}
-          </li>
-          <li>
-            {isAuthenticated && (
-              <NavLink
-                id="nav-bot"
-                className={({ isActive }) => {
-                  return isActive ? "isActive" : "";
-                }}
-                to="/bot"
-              >
-                ✨ Agustín
-              </NavLink>
-            )}
-          </li>
-          <li>{isAuthenticated && <MenuUser />}</li>
-          <li>
+            </Badge>
+          )}
+        </li>
+        <li>
+          {isAuthenticated && (
+            <NavLink
+              id="nav-crear-registro"
+              className={({ isActive }) => {
+                return isActive ? "isActive" : "";
+              }}
+              to="/new"
+              onClick={closeMenu}
+            >
+              Crear registro
+            </NavLink>
+          )}
+        </li>
+        <li>
+          {isAuthenticated && (
+            <NavLink
+              id="nav-bot"
+              className={({ isActive }) => {
+                return isActive ? "isActive" : "";
+              }}
+              to="/bot"
+              onClick={closeMenu}
+            >
+              ✨ Agustín
+            </NavLink>
+          )}
+        </li>
+        <li>{isAuthenticated && <MenuUser onNavigate={closeMenu} />}</li>
+        <li>
           {!isAuthenticated && (
-            <NavLink id="nav-login" to="/login">
+            <NavLink id="nav-login" to="/login" onClick={closeMenu}>
               Login
             </NavLink>
           )}
-          </li>
-        </div>
+        </li>
       </ul>
     </header>
   );

@@ -7,11 +7,15 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    
+
     border-top: #d65703 10px solid;
     border-bottom: #ccc 1px solid;
     color: black;
     padding: 20px;
+}
+
+#header-navbar h1 {
+    white-space: nowrap;
 }
 
 #user-menu > li{
@@ -27,8 +31,14 @@
     cursor: pointer;
 }
 
+#header-navbar .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    list-style: none;
+}
 
-#header-navbar ul li {
+#header-navbar .nav-right li {
     display: inline-block;
 }
 
@@ -70,13 +80,86 @@
     text-decoration: none;
 }
 
+/* Botón hamburguesa: oculto en escritorio, se muestra por media query abajo */
+.nav-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.6rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+.nav-toggle:hover {
+    background: hsl(30, 100%, 98%);
+}
+
 #content {
-    margin-top: 40px;
-    margin-bottom: 100px;
-    display: grid;
-    place-content: center;
+    max-width: 1100px;
+    margin: 40px auto 100px;
+    padding: 0 24px;
 }
 
 a {
     color: inherit;
+}
+
+@media (max-width: 760px) {
+    #header-navbar {
+        padding: 14px 16px;
+        flex-wrap: wrap;
+    }
+
+    #header-navbar h1 {
+        font-size: 1.25rem;
+    }
+
+    .nav-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* El panel de navegación se convierte en un desplegable a pantalla completa */
+    #header-navbar .nav-right {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+        background: white;
+        border-bottom: #ccc 1px solid;
+        padding: 10px 16px 18px;
+        box-shadow: 0 10px 18px rgba(0, 0, 0, .08);
+    }
+
+    #header-navbar .nav-right.open {
+        display: flex;
+    }
+
+    #header-navbar .nav-right li {
+        display: block;
+        width: 100%;
+    }
+
+    #header-navbar .nav-right a,
+    #header-navbar .nav-right button {
+        display: block;
+        width: 100%;
+        text-align: left;
+    }
+
+    #nav-login {
+        width: 100%;
+    }
+
+    #content {
+        margin: 20px auto 60px;
+        padding: 0 16px;
+    }
 }

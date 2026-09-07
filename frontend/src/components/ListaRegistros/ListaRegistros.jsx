@@ -271,6 +271,8 @@ function ListaRegistros() {
       <div
         style={{
           display: "flex",
+          flexWrap: "wrap",
+          gap: "12px",
           justifyContent: "space-between",
           alignItems: "center",
           marginBottom: 20,

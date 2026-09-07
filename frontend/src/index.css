@@ -11,9 +11,20 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-* {
+*,
+*::before,
+*::after {
   margin: 0;
 	padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  overflow-x: hidden;
+}
+
+img {
+  max-width: 100%;
 }
 
 h1 {
