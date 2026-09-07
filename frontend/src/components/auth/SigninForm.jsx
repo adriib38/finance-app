@@ -27,6 +27,7 @@ function SigninForm() {
   return (
     <form
       onSubmit={handlerForm}
+      style={{ maxWidth: 380, width: "100%", margin: "40px auto" }}
     >
       <h2>Inicio sesión</h2>
       <label htmlFor="username">Username</label>

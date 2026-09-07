@@ -112,6 +112,7 @@ export function RegistrosContextProvider(props) {
     <RegistrosContext.Provider
       value={{
         registros,
+        recargarRegistros: getRegistros,
         deleteRegistro,
         crearRegistro,
         updateRegistro,

@@ -1,5 +1,6 @@
 import { useState, useContext, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import { AuthContext } from "../../context/AuthContext";
 
 function EntidadLi({children, style, ...rest}) {
@@ -12,10 +13,14 @@ function EntidadLi({children, style, ...rest}) {
 
 }
 
-export function MenuUser() {
+export function MenuUser({ onNavigate }) {
   const { userInfo, logout, loading } = useContext(AuthContext);
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
+  // En el menú móvil el avatar queda pegado a la izquierda (panel vertical),
+  // así que el desplegable debe anclarse a izquierda; en escritorio el
+  // avatar está pegado a la derecha del header y se ancla a la derecha.
+  const isMobileNav = useMediaQuery("(max-width:760px)");
 
   // Cerrar el menú al hacer clic fuera de él.
   useEffect(() => {
@@ -47,12 +52,13 @@ export function MenuUser() {
     display: "flex",
     flexDirection: "column",
     position: "absolute",
-    left: "92%",
+    top: "calc(100% + 8px)",
+    ...(isMobileNav ? { left: 0 } : { right: 0 }),
+    maxWidth: "calc(100vw - 32px)",
     background: "#fff",
     border: "3px solid whitesmoke",
     borderRadius: 6,
     width: "max-content",
-    minWidth: "8%",
     zIndex: 10,
   }
 
@@ -64,8 +70,18 @@ export function MenuUser() {
     setOpen((prev) => !prev);
   };
 
+  const handleNavigate = () => {
+    setOpen(false);
+    if (onNavigate) onNavigate();
+  };
+
+  const handleLogout = () => {
+    logout();
+    if (onNavigate) onNavigate();
+  };
+
   return (
-    <div ref={menuRef}>
+    <div ref={menuRef} style={{ position: "relative", display: "inline-block" }}>
       <img
         id="img-user"
         onClick={handleClick} style={imgProfileStyle} src={srcImage}></img>
@@ -79,13 +95,13 @@ export function MenuUser() {
           <EntidadLi style={{ cursor: "pointer" }}>
             <Link
               to="/categorias"
-              onClick={() => setOpen(false)}
+              onClick={handleNavigate}
             >
               Categorías
             </Link>
           </EntidadLi>
           <hr></hr>
-          <EntidadLi style={{ color: "red", cursor: "pointer" }} onClick={logout}>
+          <EntidadLi style={{ color: "red", cursor: "pointer" }} onClick={handleLogout}>
               Logout
           </EntidadLi>
         </ul>

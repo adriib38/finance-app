@@ -14,6 +14,11 @@
   gap: 12px;
   align-items: center;
   margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.cat-nueva .MuiTextField-root {
+  flex: 1 1 200px;
 }
 
 .cat-list {
@@ -57,4 +62,20 @@
   display: flex;
   gap: 4px;
   margin-left: auto;
+}
+
+@media (max-width: 480px) {
+  .cat-page {
+    padding: 16px;
+  }
+
+  .cat-nombre {
+    min-width: 120px;
+  }
+
+  .cat-actions {
+    margin-left: 0;
+    flex-basis: 100%;
+    justify-content: flex-end;
+  }
 }

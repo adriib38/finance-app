@@ -1,4 +1,5 @@
 import { useContext, useEffect, useMemo, useState } from "react";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import { PieChart, pieArcLabelClasses } from "@mui/x-charts/PieChart";
 import {
   getStatsCantidadCategoria,
@@ -33,6 +34,7 @@ const makeArcLabel = (data) => {
 
 function Dashboard() {
   const { range } = useContext(HomeFilterContext);
+  const isMobile = useMediaQuery("(max-width:600px)");
 
   const [rawGastos, setRawGastos] = useState([]);
   const [rawIngresos, setRawIngresos] = useState([]);
@@ -75,11 +77,16 @@ function Dashboard() {
   };
 
   const cardChartStyles = {
-    flex: "1"
+    // flex-basis alto obliga a apilar en columna cuando no entran las dos
+    // tarjetas lado a lado (el wrap lo habilita el contenedor de abajo).
+    flex: "1 1 340px",
+    minWidth: 0,
   };
 
   const chartConfig = {
-    height: 230,
+    // En mobile la leyenda pasa a fila debajo del gráfico: en columna a la
+    // derecha no entra en pantallas angostas.
+    height: isMobile ? 280 : 230,
     sx: {
       [`& .${pieArcLabelClasses.root}`]: {
         fill: "white",
@@ -87,17 +94,22 @@ function Dashboard() {
     },
     colors: ["#EFEA5A", "#048BA8", "#A4036F", "#F29E4C", "#16DB93"],
     slotProps : {
-      legend: {
-        direction: 'column',
-        position: { vertical: 'middle', horizontal: 'right' },
-        padding: -10
-      }
+      legend: isMobile
+        ? {
+            direction: 'row',
+            position: { vertical: 'bottom', horizontal: 'middle' },
+          }
+        : {
+            direction: 'column',
+            position: { vertical: 'middle', horizontal: 'right' },
+            padding: -10
+          }
     }
   }
 
   return (
     <section style={sectionStyle}>
-      <div style={{display: "flex", flexDirection: 'row', justifyContent: "space-between"}}>
+      <div style={{display: "flex", flexDirection: 'row', flexWrap: 'wrap', gap: '30px', justifyContent: "space-between"}}>
         <div style={cardChartStyles}>
           <CardChart
             type={"Gasto"}

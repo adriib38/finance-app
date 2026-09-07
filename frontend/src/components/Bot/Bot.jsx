@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useContext } from "react";
 import { askBot } from "../../services/AiService";
+import { RegistrosContext } from "../../context/RegistrosContext";
 import "./style.css";
 
 const SUGERENCIAS = [
@@ -33,6 +34,10 @@ function ConsultasSQL({ consultas }) {
               <span className={c.error ? "bot-consulta-err" : "bot-consulta-ok"}>
                 {c.error
                   ? `error: ${c.error}`
+                  : c.insertadas !== undefined
+                  ? `${c.insertadas} fila${c.insertadas === 1 ? "" : "s"} insertada${
+                      c.insertadas === 1 ? "" : "s"
+                    }`
                   : `${c.filas} fila${c.filas === 1 ? "" : "s"}${
                       c.truncada ? " · truncada" : ""
                     }`}
@@ -58,6 +63,7 @@ function Bot() {
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
+  const { recargarRegistros } = useContext(RegistrosContext);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -84,6 +90,12 @@ function Bot() {
             consultas: data.consultas,
           },
         ]);
+
+        // Si el bot ha insertado algo, refresca la lista de registros de la app.
+        const huboInsert = (data.consultas || []).some(
+          (c) => c.tool === "insertar_bd" && !c.error && (c.insertadas ?? 0) > 0
+        );
+        if (huboInsert && recargarRegistros) recargarRegistros();
       } catch (e) {
         const msg =
           e.status === 503
@@ -95,7 +107,7 @@ function Bot() {
         if (inputRef.current) inputRef.current.focus();
       }
     },
-    [input, loading]
+    [input, loading, recargarRegistros]
   );
 
   const onKeyDown = (e) => {

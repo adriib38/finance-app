@@ -38,7 +38,7 @@ class User {
     }
 
     db.query(
-      "SELECT username, created_at FROM users WHERE uuid = ?",
+      "SELECT uuid, username, created_at FROM users WHERE uuid = ?",
       [uuid],
       (err, results) => {
         if (err) {
