@@ -10,3 +10,13 @@
     margin-bottom: 40px;
     gap: 10px
 }
+
+@media (max-width: 600px) {
+    .cardChart-article {
+        padding: 14px;
+    }
+
+    .cardChart-header {
+        margin-bottom: 20px;
+    }
+}
