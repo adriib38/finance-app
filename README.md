@@ -142,11 +142,7 @@ migraciones está documentada en **[backend/README.md](./backend/README.md)**.
      `backend/src/migrations/` (no edites migraciones ya aplicadas).
 4. Abre el PR contra `main` describiendo qué cambia y por qué.
 
-Ideas para empezar a colaborar:
-
-- Revisa **[updates-v2.md](./updates-v2.md)**, el roadmap de la v2 (features
-  pendientes como suscripciones recurrentes, modo oscuro o dockerizar el
-  frontend) — buen punto de partida para una primera contribución.
+Para empezar a colaborar:
 - Abre un **issue** en GitHub para reportar bugs o proponer features antes de
   ponerte a picar código, así se puede discutir el enfoque.
 
@@ -154,7 +150,6 @@ Ideas para empezar a colaborar:
 
 - [backend/README.md](./backend/README.md) — variables de entorno, endpoints
   de la API, esquema de base de datos, migraciones y colección de Postman.
-- [updates-v2.md](./updates-v2.md) — plan de renovación v2.
 
 ## 📄 Licencia
 
