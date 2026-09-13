@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a7c3e1d2-4b5f-4a6c-8e9d-0f1a2b3c4d5e",
     "name": "Finance App API",
-    "description": "Colección de todos los endpoints del backend de Finance App.\n\n**Autenticación**: ejecuta primero `Auth > Signin`. El backend responde con una cookie `access_token` (httpOnly, 1h) que Postman guarda en su cookie jar y reenvía automáticamente al resto de peticiones del mismo dominio. Rellena la variable de colección `password` antes de empezar.\n\n**Variables de colección**:\n- `baseUrl` — host del backend (por defecto `http://localhost:4000`).\n- `username` / `password` — credenciales de la cuenta única `admin`.\n- `categoriaId`, `categoriaIngresoId`, `registroId`, `sourceCategoriaId` — se rellenan solas al ejecutar las peticiones de listado (scripts de Test), o a mano.\n- `pregunta` — texto para el bot IA.\n\nRutas: prefijo de la API `/api/v1`. Stats en `/api/v1/stats`, categorías en `/api/v1/categorias`, bot IA en `/api/v1/ai`.",
+    "description": "Colección de todos los endpoints del backend de Finance App.\n\n**Autenticación**: ejecuta primero `Auth > Signin`. El backend responde con una cookie `access_token` (httpOnly, 1h) que Postman guarda en su cookie jar y reenvía automáticamente al resto de peticiones del mismo dominio. Rellena la variable de colección `password` antes de empezar.\n\n**Variables de colección**:\n- `baseUrl` — host del backend (por defecto `http://localhost:4000`).\n- `username` / `password` — credenciales de la cuenta única `admin`.\n- `categoriaId`, `categoriaIngresoId`, `registroId`, `sourceCategoriaId`, `suscripcionId` — se rellenan solas al ejecutar las peticiones de listado (scripts de Test), o a mano.\n- `pregunta` — texto para el bot IA.\n\nRutas: prefijo de la API `/api/v1`. Stats en `/api/v1/stats`, categorías en `/api/v1/categorias`, suscripciones recurrentes en `/api/v1/suscripciones`, bot IA en `/api/v1/ai`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -13,6 +13,7 @@
     { "key": "categoriaIngresoId", "value": "", "type": "string" },
     { "key": "registroId", "value": "", "type": "string" },
     { "key": "sourceCategoriaId", "value": "", "type": "string" },
+    { "key": "suscripcionId", "value": "", "type": "string" },
     { "key": "pregunta", "value": "¿Cuánto he gastado este mes y en qué categorías?", "type": "string" }
   ],
   "item": [
@@ -226,6 +227,130 @@
               "path": ["api", "v1", "categorias", "{{categoriaId}}", "merge"]
             },
             "description": "🔒 Fusiona la categoría `sourceId` dentro de `:id` (destino): reasigna sus registros y borra `sourceId`.\n\n- Body: `{ sourceId }`\n- `200` → categoría destino\n- `400` sourceId ausente / misma categoría / distinto tipo / no existe"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Suscripciones",
+      "description": "Suscripciones recurrentes (pagos/ingresos mensuales, p.ej. \"Gimnasio, 30€, día 5\"). El motor de reconciliación (`src/suscripciones/procesarSuscripciones.js`) genera solo el registro del mes correspondiente al arrancar el backend y cada hora mientras sigue vivo — no hace falta llamar a nada para que se facturen, esta carpeta es solo para gestionar la definición.",
+      "item": [
+        {
+          "name": "Listar suscripciones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const list = pm.response.json();",
+                  "if (Array.isArray(list) && list.length) {",
+                  "  pm.collectionVariables.set('suscripcionId', list[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/suscripciones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "suscripciones"]
+            },
+            "description": "🔒 Lista de suscripciones del usuario (activas primero, luego por nombre).\n\nRespuesta: `[{ id, nombre, categoria_id, categoria, tipo, cantidad, dia_pago, fecha_inicio, fecha_fin, activa, created_at, updated_at, proximoCargo }]`.\n\n`proximoCargo` es la próxima fecha de cobro según `dia_pago` (`null` si está pausada); no indica si ese periodo ya está facturado."
+          },
+          "response": []
+        },
+        {
+          "name": "Crear suscripción",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('suscripcionId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Gimnasio\",\n  \"categoria_id\": \"{{categoriaId}}\",\n  \"tipo\": \"gasto\",\n  \"cantidad\": 30,\n  \"dia_pago\": 5,\n  \"fecha_inicio\": \"2026-01-01\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/suscripciones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "suscripciones"]
+            },
+            "description": "🔒 Crea una suscripción recurrente.\n\n- Body: `{ nombre, categoria_id?: string, tipo: 'gasto'|'ingreso', cantidad: number, dia_pago: number (1-31), fecha_inicio: 'YYYY-MM-DD', fecha_fin?: 'YYYY-MM-DD' }`. `categoria_id` es opcional (omítelo o pon `null` para \"sin categoría\").\n- Si el mes no tiene `dia_pago` (p.ej. 31 en febrero) se cobra el último día de ese mes.\n- `201` → suscripción creada (incluye `proximoCargo`)\n- `400` faltan campos / `tipo` inválido / `cantidad` ≤ 0 / `dia_pago` fuera de 1-31 / `categoria_id` no existe o no coincide de tipo"
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar suscripción",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cantidad\": 32.5,\n  \"dia_pago\": 6\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/suscripciones/{{suscripcionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "suscripciones", "{{suscripcionId}}"]
+            },
+            "description": "🔒 Actualización parcial. Body: cualquiera de `{ nombre?, categoria_id?, tipo?, cantidad?, dia_pago?, fecha_fin?, activa? }`.\n\n**`fecha_inicio` no es editable** (crea otra suscripción si necesitas cambiarla). Usa `{ \"activa\": false }` para pausarla sin perder el histórico, o `{ \"activa\": true }` para reanudarla.\n\n- `200` → suscripción · `400` validación · `404` no encontrada"
+          },
+          "response": []
+        },
+        {
+          "name": "Pausar suscripción",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activa\": false\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/suscripciones/{{suscripcionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "suscripciones", "{{suscripcionId}}"]
+            },
+            "description": "🔒 Atajo sobre el mismo endpoint que \"Actualizar suscripción\": detiene la generación de cargos nuevos sin borrar la definición ni el histórico. Vuelve a poner `\"activa\": true` para reanudarla."
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar suscripción",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/suscripciones/{{suscripcionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "suscripciones", "{{suscripcionId}}"]
+            },
+            "description": "🔒 Borra la suscripción y su ledger de periodos facturados (`suscripciones_cargos`). Los `registros` ya generados **no se borran**.\n\n- `200 { \"message\": \"Suscripción eliminada\" }` · `404` no encontrada"
           },
           "response": []
         }

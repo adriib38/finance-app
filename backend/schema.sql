@@ -44,6 +44,39 @@ CREATE TABLE IF NOT EXISTS registros (
   INDEX idx_registros_user (user)
 );
 
+-- Feature 1: suscripciones recurrentes (pagos/ingresos mensuales automáticos).
+CREATE TABLE IF NOT EXISTS suscripciones (
+  id           VARCHAR(36)   NOT NULL PRIMARY KEY,
+  user         VARCHAR(36)   NOT NULL,
+  nombre       VARCHAR(255)  NOT NULL,
+  categoria_id VARCHAR(36)   NULL,
+  tipo         ENUM('gasto','ingreso') NOT NULL DEFAULT 'gasto',
+  cantidad     DECIMAL(12,2) NOT NULL,
+  dia_pago     TINYINT UNSIGNED NOT NULL,
+  fecha_inicio DATE          NOT NULL,
+  fecha_fin    DATE          NULL,
+  activa       BOOLEAN       NOT NULL DEFAULT 1,
+  created_at   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_suscripciones_user FOREIGN KEY (user) REFERENCES users(uuid) ON DELETE CASCADE,
+  CONSTRAINT fk_suscripciones_categoria FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE SET NULL,
+  CONSTRAINT chk_suscripciones_dia_pago CHECK (dia_pago BETWEEN 1 AND 31),
+  INDEX idx_suscripciones_user (user)
+);
+
+-- Qué periodos (mes) de cada suscripción ya se han facturado (ver
+-- src/suscripciones/procesarSuscripciones.js).
+CREATE TABLE IF NOT EXISTS suscripciones_cargos (
+  id             VARCHAR(36)  NOT NULL PRIMARY KEY,
+  suscripcion_id VARCHAR(36)  NOT NULL,
+  periodo        CHAR(7)      NOT NULL,
+  registro_id    VARCHAR(36)  NULL,
+  created_at     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_cargos_suscripcion FOREIGN KEY (suscripcion_id) REFERENCES suscripciones(id) ON DELETE CASCADE,
+  CONSTRAINT fk_cargos_registro FOREIGN KEY (registro_id) REFERENCES registros(id) ON DELETE SET NULL,
+  CONSTRAINT uq_cargos_suscripcion_periodo UNIQUE (suscripcion_id, periodo)
+);
+
 -- Control de migraciones aplicadas.
 CREATE TABLE IF NOT EXISTS schema_migrations (
   name       VARCHAR(255) NOT NULL PRIMARY KEY,

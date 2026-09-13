@@ -95,9 +95,8 @@ npm start               # aplica migraciones, siembra la cuenta admin y arranca 
 
 ### 3. Frontend
 
-El frontend no está dockerizado todavía (ver [roadmap](./updates-v2.md)); se
-levanta con Node. Necesita `frontend/src/env.js` (no versionado) apuntando al
-backend:
+El frontend no está dockerizado todavía; se levanta con Node. Necesita
+`frontend/src/env.js` (no versionado) apuntando al backend:
 
 ```js
 // frontend/src/env.js

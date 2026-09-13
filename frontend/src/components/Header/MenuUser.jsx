@@ -1,4 +1,5 @@
 import { useState, useContext, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { AuthContext } from "../../context/AuthContext";
 
@@ -97,6 +98,15 @@ export function MenuUser({ onNavigate }) {
               onClick={handleNavigate}>
                 Categorías
           </EntidadLi>
+          <EntidadLi style={{ cursor: "pointer" }}>
+            <Link
+              to="/suscripciones"
+              onClick={handleNavigate}
+            >
+              Suscripciones
+            </Link>
+          </EntidadLi>
+          <hr></hr>
           <EntidadLi style={{ color: "red", cursor: "pointer" }} onClick={handleLogout}>
               Logout
           </EntidadLi>
