@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/main.js",
-    "migrate": "node src/migrate.js"
+    "migrate": "node src/migrate.js",
+    "suscripciones:procesar": "node src/scripts/procesarSuscripciones.js"
   },
   "author": "Adrián Benítez",
   "license": "ISC",

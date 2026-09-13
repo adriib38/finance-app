@@ -28,3 +28,12 @@ export const monthLabel = (periodo, withYear = false) => {
   });
   return withYear ? `${label} ${String(y).slice(2)}` : label;
 };
+
+// "YYYY-MM-DD" → "DD/MM/YYYY". Toma solo los primeros 10 caracteres (por si
+// llega un ISO con hora, p.ej. "2026-09-30T00:00:00.000Z") para no arrastrar
+// desfases de zona horaria al convertir a Date.
+export const formatFechaCorta = (value) => {
+  if (!value) return "";
+  const [y, m, d] = String(value).slice(0, 10).split("-");
+  return `${d}/${m}/${y}`;
+};

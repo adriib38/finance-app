@@ -100,6 +100,14 @@ export function MenuUser({ onNavigate }) {
               Categorías
             </Link>
           </EntidadLi>
+          <EntidadLi style={{ cursor: "pointer" }}>
+            <Link
+              to="/suscripciones"
+              onClick={handleNavigate}
+            >
+              Suscripciones
+            </Link>
+          </EntidadLi>
           <hr></hr>
           <EntidadLi style={{ color: "red", cursor: "pointer" }} onClick={handleLogout}>
               Logout

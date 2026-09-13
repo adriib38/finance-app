@@ -1,0 +1,134 @@
+.susc-page {
+  padding: 24px;
+  max-width: 900px;
+}
+
+.susc-intro {
+  color: #555;
+  margin-top: -8px;
+  margin-bottom: 24px;
+}
+
+.susc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Tarjeta: alta ("Nueva suscripción") y cada fila usan el mismo look, con
+   bastante aire — no habrá muchas, así que prima la legibilidad sobre la
+   densidad. */
+.susc-card {
+  background: #ebebeb66;
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  padding: 24px 28px;
+  margin-bottom: 20px;
+}
+
+.susc-card--inactive {
+  opacity: 0.6;
+}
+
+.susc-card-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.susc-card-title {
+  margin: 0;
+  font-size: 1.1em;
+}
+
+.susc-card-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 24px 28px;
+}
+
+.susc-field {
+  min-width: 0;
+}
+
+.susc-field--nombre {
+  flex: 1 1 220px;
+  min-width: 180px;
+}
+
+.susc-switch {
+  margin-left: auto;
+}
+
+.susc-tipo {
+  flex-shrink: 0;
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border-radius: 999px;
+}
+
+.susc-tipo--gasto {
+  background: #fde2e2;
+  color: #a02020;
+}
+
+.susc-tipo--ingreso {
+  background: #ddf3e4;
+  color: #1c7a3d;
+}
+
+.susc-proximo {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-bottom: 4px;
+}
+
+.susc-field-label {
+  font-size: 0.75em;
+  color: rgba(0, 0, 0, 0.6);
+  margin-bottom: 2px;
+}
+
+.susc-proximo-valor {
+  font-size: 1rem;
+}
+
+.susc-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+/* Quita el aspecto de "caja" de los inputs: sin línea en reposo, solo un
+   sutil subrayado al enfocar. */
+.susc-page .MuiInput-underline:before,
+.susc-page .MuiInput-underline:hover:not(.Mui-disabled):before {
+  border-bottom: none;
+}
+
+.susc-page .MuiInput-underline:after {
+  border-bottom: 2px solid #048ba8;
+}
+
+@media (max-width: 480px) {
+  .susc-page {
+    padding: 16px;
+  }
+
+  .susc-card {
+    padding: 20px;
+  }
+
+  .susc-switch {
+    margin-left: 0;
+  }
+
+  .susc-card-header .MuiButton-root {
+    margin-left: auto;
+  }
+}

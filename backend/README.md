@@ -70,9 +70,14 @@ Al arrancar (`src/main.js`) el servidor, **en este orden**:
    borra las demás cuentas.
 3. **`seedCategorias`** — inserta un conjunto base de categorías para `admin`
    (idempotente).
-4. Escucha en `PORT`.
+4. **`procesarSuscripciones`** — genera los cargos de suscripciones recurrentes
+   pendientes (incluidos los que se hayan perdido mientras el servidor estaba
+   parado). Ver [Suscripciones recurrentes](#suscripciones-recurrentes).
+5. Escucha en `PORT`.
 
-Si algo falla en el arranque, el proceso sale con código `1`.
+Si algo falla en el arranque, el proceso sale con código `1`. Una vez arriba,
+el servidor repite el paso 4 cada hora mientras siga vivo (`setInterval` en
+`main.js`), para cubrir el caso de que no se reinicie durante meses.
 
 ---
 
@@ -88,10 +93,12 @@ src/
 ├── seedCategorias.js           # categorías base
 ├── migrations/                 # 001_*.sql, 004_*.js, ... (ordenadas por nombre)
 ├── scripts/
-│   └── seedTestData.js         # genera registros ficticios (dev)
+│   ├── seedTestData.js         # genera registros ficticios (dev)
+│   └── procesarSuscripciones.js # dispara el motor de suscripciones a mano
 ├── v1/routes/
 │   ├── auth.js                 # /api/v1  (signin, signout, user)
 │   ├── categorias.js           # /api/v1/categorias
+│   ├── suscripciones.js        # /api/v1/suscripciones
 │   ├── ai.js                   # /api/v1/ai  (bot IA)
 │   ├── registros.js            # /api/v1  (registros)
 │   └── stats.js                # /api/v1/stats
@@ -101,21 +108,26 @@ src/
 │   ├── dbReadOnly.js           # pool de solo lectura para la tool
 │   ├── queryTool.js            # validación SELECT + ejecución
 │   └── askController.js        # bucle de tool use (Chat Completions)
+├── suscripciones/               # Feature 1: suscripciones recurrentes
+│   └── procesarSuscripciones.js # motor de reconciliación (idempotente)
 ├── controllers/
 │   ├── authController.js
 │   ├── registrosController.js
 │   ├── categoriasController.js
+│   ├── suscripcionesController.js
 │   ├── statsRegistrosController.js
 │   └── middlewares/verifyJWT.js
 ├── models/
 │   ├── User.js
 │   ├── Registro.js
-│   └── Categoria.js
+│   ├── Categoria.js
+│   └── Suscripcion.js
 ├── services/
 │   └── statsRegistrosService.js
 └── utils/
     ├── validators.js
-    └── palette.js
+    ├── palette.js
+    └── fechasRecurrentes.js     # helpers de fecha para suscripciones (clamp de día, etc.)
 ```
 
 ---
@@ -136,6 +148,15 @@ inicializar una BD desde cero).
   denormalizado), `categoria_id` (FK → `categorias.id`, `ON DELETE SET NULL`),
   `tipo`, `cantidad` (`DECIMAL(12,2)`), `user` (FK → `users.uuid`),
   `created_at`, `updated_at` (automático `ON UPDATE CURRENT_TIMESTAMP`).
+- **`suscripciones`** — `id` (PK), `nombre`, `categoria_id` (FK →
+  `categorias.id`, `ON DELETE SET NULL`), `tipo` (`gasto`|`ingreso`),
+  `cantidad`, `dia_pago` (1–31), `fecha_inicio`, `fecha_fin` (nullable),
+  `activa`, `user` (FK → `users.uuid`), `created_at`, `updated_at`.
+- **`suscripciones_cargos`** — `id` (PK), `suscripcion_id` (FK →
+  `suscripciones.id`, `ON DELETE CASCADE`), `periodo` (`'YYYY-MM'`),
+  `registro_id` (FK → `registros.id`, `ON DELETE SET NULL`), `created_at`.
+  Único: `(suscripcion_id, periodo)` — ver
+  [Suscripciones recurrentes](#suscripciones-recurrentes).
 - **`schema_migrations`** — `name` (PK), `applied_at`. Control de migraciones.
 
 > `registros.categoria` (texto) se mantiene **sincronizado** con
@@ -159,6 +180,54 @@ node src/scripts/seedTestData.js 250          # 250 registros ficticios repartid
 node src/scripts/seedTestData.js 250 --reset  # borra los ficticios previos y regenera
 ```
 Los ficticios llevan `observaciones` con prefijo `[seed]`.
+
+---
+
+## Suscripciones recurrentes
+
+Feature 1 del plan v2: pagos/ingresos mensuales automáticos (p. ej. "Gimnasio,
+30€, día 5"). Motor en [`src/suscripciones/procesarSuscripciones.js`](./src/suscripciones/procesarSuscripciones.js).
+
+**Idea de diseño**: en vez de "disparar el día X", en cada arranque (y cada
+hora mientras el proceso sigue vivo, `setInterval` en `main.js`) se pregunta
+qué periodos (mes) de cada suscripción activa ya deberían haberse cobrado y
+todavía no tienen cargo registrado. Así da igual que el servidor haya estado
+parado varios días: al volver a levantarse genera los que falten, con la
+**fecha real a la que correspondían** — no la fecha en la que arrancó el
+servidor. Si no se hiciera así, un cobro atrasado ensuciaría las estadísticas
+del mes en el que casualmente se reinició el server.
+
+- **Idempotente**: `suscripciones_cargos` tiene `UNIQUE (suscripcion_id,
+  periodo)`, así que llamar al motor varias veces seguidas (arranque +
+  intervalo solapados, o `npm run suscripciones:procesar` a mano) nunca
+  duplica un cargo; un `ER_DUP_ENTRY` en la inserción se trata como "ya
+  facturado", no como error.
+- **Día de pago imposible**: si el mes no tiene ese día (31 en abril, 30/31 en
+  febrero) se cobra el último día de ese mes (`clampDia` en
+  `utils/fechasRecurrentes.js`).
+- **Alta a mitad de mes**: si el día de pago clampeado del mes de alta cae
+  antes de `fecha_inicio`, ese primer mes no se factura (pero sí los
+  siguientes).
+- **Fecha del registro**: el `INSERT` en `registros` fija explícitamente
+  `created_at`/`updated_at` al día de cobro real del periodo, en vez de dejar
+  el `DEFAULT CURRENT_TIMESTAMP`. Es una excepción deliberada y acotada a este
+  único flujo interno (la API pública de `registros` sigue sin fecha
+  editable) — necesaria para que las estadísticas/timeline no acumulen los
+  cargos atrasados en el mes en el que el servidor volvió a arrancar.
+- **Pausar vs. eliminar**: `activa = false` detiene la generación de cargos
+  nuevos sin borrar histórico ni ledger. Eliminar la suscripción borra en
+  cascada `suscripciones_cargos` (es solo contabilidad interna) pero **no**
+  toca los `registros` ya generados.
+- **Borrar un cargo generado**: si el usuario borra a mano un registro
+  auto-generado, su fila en `suscripciones_cargos` se conserva
+  (`registro_id` pasa a `NULL`) para que el motor no lo vuelva a crear en el
+  siguiente arranque.
+- **Límite de seguridad**: no se generan más de 240 meses (20 años) de golpe
+  por ejecución, aunque `fecha_inicio` esté puesta muy en el pasado por error.
+
+```bash
+npm run suscripciones:procesar   # fuerza la reconciliación sin esperar al arranque/intervalo
+```
 
 ---
 
@@ -260,6 +329,42 @@ Fusiona otra categoría dentro de `:id`: reasigna sus registros y la borra.
 - **Respuestas**:
   - `200` → `Categoria` (destino)
   - `400` → `sourceId` ausente, misma categoría, tipo distinto o categoría inexistente
+
+---
+
+### Suscripciones — `/api/v1/suscripciones` 🔒
+
+Objeto **suscripción**: `{ id, nombre, categoria_id, categoria, tipo, cantidad,
+dia_pago, fecha_inicio, fecha_fin, activa, created_at, updated_at, proximoCargo }`.
+`proximoCargo` se calcula al vuelo (próxima fecha de cobro ≥ hoy según
+`dia_pago`; `null` si `activa` es `false`) y no depende de si ya está
+facturado — ver [Suscripciones recurrentes](#suscripciones-recurrentes) para
+cómo se generan los cargos de verdad.
+
+#### `GET /api/v1/suscripciones`
+- **Respuestas**: `200` → `Suscripcion[]` (activas primero, luego por nombre)
+
+#### `POST /api/v1/suscripciones`
+- **Body**: `{ "nombre": string, "categoria_id"?: string, "tipo": "gasto"|"ingreso", "cantidad": number, "dia_pago": number, "fecha_inicio": "YYYY-MM-DD", "fecha_fin"?: "YYYY-MM-DD" }`
+- **Respuestas**:
+  - `201` → `Suscripcion`
+  - `400` → falta `nombre`/`fecha_inicio`, `tipo` inválido, `cantidad` ≤ 0,
+    `dia_pago` fuera de 1–31, `categoria_id` no existe o su `tipo` no coincide
+
+#### `PUT /api/v1/suscripciones/:id`
+Actualización parcial. **`fecha_inicio` no es editable** (cambiarla dispararía
+un backfill inesperado en el próximo arranque; para eso hay que crear otra
+suscripción).
+
+- **Body**: cualquiera de `{ "nombre"?, "categoria_id"?, "tipo"?, "cantidad"?, "dia_pago"?, "fecha_fin"?, "activa"? }`
+- **Respuestas**: `200` → `Suscripcion` · `400` validación · `404` no encontrada
+
+#### `DELETE /api/v1/suscripciones/:id`
+- **Respuestas**:
+  - `200` → `{ "message": "Suscripción eliminada" }`
+  - `404` → no encontrada
+- Los `registros` ya generados **no se borran**; solo se pierde la definición
+  y su ledger de periodos facturados.
 
 ---
 
