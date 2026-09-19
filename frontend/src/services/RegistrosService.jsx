@@ -74,6 +74,32 @@ export const getStatsTimeline = async (range) => {
     }
 }
 
+// Top N gastos más caros (registros individuales) del rango seleccionado.
+export const getStatsTopGastos = async (range, limit = 5) => {
+    const p = new URLSearchParams();
+    if (range?.from) p.set("from", range.from);
+    if (range?.to) p.set("to", range.to);
+    p.set("limit", limit);
+    const url = `${API_BASE_URL}/stats/topGastos?${p.toString()}`;
+    try {
+        const resp = await fetch(url, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+        });
+        if (!resp.ok) {
+            throw new Error('Failed to fetch top gastos');
+        }
+        const data = await resp.json();
+        return { status: resp.status, data };
+    } catch(error) {
+        console.error('Error fetching top gastos:', error);
+        throw error;
+    }
+}
+
 export const getRegistros = async () => {
     const url = `${API_BASE_URL}/misregistros`;
     try {

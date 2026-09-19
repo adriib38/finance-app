@@ -49,9 +49,21 @@ const getTimeline = async (req, res) => {
   }
 }
 
+const getTopGastos = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit, 10) || 5;
+    const data = await statsRegistrosService.getTopGastos(req.userUuid, readRange(req), limit);
+    res.send(data);
+  } catch (error) {
+    console.error("Error al obtener top gastos:", error);
+    res.status(500).send({ message: 'Error al obtener top gastos' });
+  }
+}
+
 module.exports = {
   getStats,
   getCantidadCategoriasGastos,
   getCantidadCategoriasIngresos,
-  getTimeline
+  getTimeline,
+  getTopGastos
 };

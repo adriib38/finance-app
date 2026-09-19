@@ -1,6 +1,8 @@
 const Registro = require("../models/Registro");
 const Categoria = require("../models/Categoria");
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
 // Resuelve el par (categoria_id, categoria texto) a partir de lo que llegue en
 // el body. Si viene categoria_id se usa su nombre como texto denormalizado.
 async function resolveCategoria(body, userUuid) {
@@ -67,11 +69,16 @@ const updateRegistro = async (req, res) => {
     !body.categoria &&
     !body.categoria_id &&
     !body.tipo &&
-    !body.cantidad
+    !body.cantidad &&
+    !body.fecha
   ) {
     return res
       .status(400)
       .send({ status: "ERROR", data: "No fields provided for update" });
+  }
+
+  if (body.fecha !== undefined && !ISO_DATE.test(body.fecha)) {
+    return res.status(400).json({ message: "fecha inválida (YYYY-MM-DD)" });
   }
 
   const newRegistro = {};
@@ -82,6 +89,10 @@ const updateRegistro = async (req, res) => {
 
   if (body.observaciones !== undefined) {
     newRegistro.observaciones = body.observaciones;
+  }
+
+  if (body.fecha !== undefined) {
+    newRegistro.fecha = body.fecha;
   }
 
   try {
@@ -139,6 +150,10 @@ const createRegistro = async (req, res) => {
     return res.status(400).json({ message: "Faltan campos obligatorios" });
   }
 
+  if (body.fecha !== undefined && !ISO_DATE.test(body.fecha)) {
+    return res.status(400).json({ message: "fecha inválida (YYYY-MM-DD)" });
+  }
+
   let cat;
   try {
     cat = await resolveCategoria(body, req.userUuid);
@@ -159,6 +174,7 @@ const createRegistro = async (req, res) => {
     categoria_id: cat.categoria_id ?? null,
     tipo: body.tipo,
     cantidad: body.cantidad,
+    fecha: body.fecha || null,
   };
 
   Registro.createRegistro(newRegistro, req.userUuid, (err, results) => {

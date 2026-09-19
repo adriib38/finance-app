@@ -9,7 +9,7 @@ import {
   ToggleButtonGroup,
 } from "@mui/material";
 import Button from "@mui/material/Button";
-import { DataGrid, GridToolbarContainer, GridToolbarExport } from '@mui/x-data-grid';
+import { DataGrid, GridToolbarContainer, GridToolbarExport, useGridApiContext } from '@mui/x-data-grid';
 import { RegistrosContext } from "../../context/RegistrosContext";
 import { CategoriasContext } from "../../context/CategoriasContext";
 import { validateRow } from "../../shared/ValidateRows";
@@ -17,6 +17,14 @@ import Tooltip from "@mui/material/Tooltip";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import "./style.css";
+
+// YYYY-MM-DD de hoy en hora local (tope del selector de fecha: no se editan
+// gastos con fecha futura).
+const today = () => {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
 
 function ListaRegistros() {
   const [modeEdit, setModeEdit] = useState(false);
@@ -119,6 +127,27 @@ function ListaRegistros() {
     setModeEdit(!modeEdit);
   };
 
+  // Editor de fecha nativo (input type="date") en vez del "date" de MUI:
+  // `fecha` viaja como string 'YYYY-MM-DD' sin hora (ver database.js), y así
+  // se edita tal cual, sin pasar por un objeto Date que pueda desplazar el
+  // día según el huso horario del navegador.
+  const DateEditCell = (props) => {
+    const { id, value, field } = props;
+    const apiRef = useGridApiContext();
+    return (
+      <input
+        type="date"
+        autoFocus
+        value={value || ""}
+        max={today()}
+        onChange={(e) =>
+          apiRef.current.setEditCellValue({ id, field, value: e.target.value })
+        }
+        style={{ width: "100%", height: "100%", border: "none", padding: "0 10px", font: "inherit" }}
+      />
+    );
+  };
+
   const RegisterType = ({ t }) => {
     // Asignar color basado en el tipo
     let background = t === 'gasto' ? '#ce1c1cb0' : '#25ce257a';
@@ -185,6 +214,16 @@ function ListaRegistros() {
       flex: 1,
       minWidth: 180,
       editable: modeEdit,
+    },
+    {
+      field: "fecha",
+      headerName: "Fecha",
+      flex: 1,
+      minWidth: 130,
+      editable: modeEdit,
+      renderEditCell: (params) => <DateEditCell {...params} />,
+      renderCell: (params) =>
+        params.value ? new Date(`${params.value}T00:00:00`).toLocaleDateString("es-ES") : "",
     },
     {
       field: "created_at",
@@ -364,7 +403,7 @@ function ListaRegistros() {
             paginationModel: { page: 0, pageSize: 15 },
           },
           sorting: {
-            sortModel: [{ field: "created_at", sort: "desc" }],
+            sortModel: [{ field: "fecha", sort: "desc" }],
           }
         }}
         pageSizeOptions={[5, 10]}

@@ -16,6 +16,9 @@ export const validateRow = (row) => {
   if (!row.cantidad || row.cantidad < 1) {
     errors.push('La cantidad es requerida');
   }
+  if (!row.fecha) {
+    errors.push('La fecha es requerida');
+  }
 
   console.log('Validation result:', errors.length); // Corrige la forma en que se imprime el resultado de la validación
 

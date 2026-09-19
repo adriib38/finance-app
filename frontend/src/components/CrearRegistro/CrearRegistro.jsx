@@ -6,13 +6,24 @@ import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import "./style.css";
 
-const emptyForm = {
+// YYYY-MM-DD en horario local (no UTC, para que "hoy" coincida con el
+// calendario del usuario aunque esté pasada la medianoche en UTC).
+const today = () => {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+const emptyForm = () => ({
   concepto: "",
   categoria_id: "",
   tipo: "",
   cantidad: 0,
   observaciones: "",
-};
+  // Fecha real del gasto/ingreso, editable: por defecto hoy, pero permite
+  // fechar hacia atrás (p. ej. cargar el domingo los gastos de la semana).
+  fecha: today(),
+});
 
 function CrearRegistro() {
   const [open, setOpen] = useState(false);
@@ -20,14 +31,14 @@ function CrearRegistro() {
   const { byTipo, loading: loadingCategorias } = useContext(CategoriasContext);
 
   const [buttonDisabled, setButtonbuttonDisabled] = useState(true);
-  const [formState, setFormState] = useState(emptyForm);
+  const [formState, setFormState] = useState(emptyForm());
 
   const opcionesCategoria = formState.tipo ? byTipo(formState.tipo) : [];
 
   const validForm = useCallback(() => {
-    const { concepto, categoria_id, tipo, cantidad, observaciones } = formState;
+    const { concepto, categoria_id, tipo, cantidad, observaciones, fecha } = formState;
     const valid =
-      concepto && categoria_id && tipo && cantidad && cantidad > 0 && observaciones;
+      concepto && categoria_id && tipo && cantidad && cantidad > 0 && observaciones && fecha;
     setButtonbuttonDisabled(!valid);
   }, [formState]);
 
@@ -54,11 +65,12 @@ function CrearRegistro() {
       tipo: formState.tipo,
       cantidad: formState.cantidad,
       observaciones: formState.observaciones,
+      fecha: formState.fecha,
     };
 
     const exito = await crearRegistro(nuevoRegistro);
     if (exito) {
-      setFormState(emptyForm);
+      setFormState(emptyForm());
       setOpen(true);
     }
   };
@@ -156,6 +168,19 @@ function CrearRegistro() {
                 required
                 onChange={handlerForm}
                 value={formState.cantidad}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="fecha">Fecha</label>
+              <input
+                type="date"
+                id="fecha"
+                name="fecha"
+                required
+                max={today()}
+                onChange={handlerForm}
+                value={formState.fecha}
               />
             </div>
           </div>

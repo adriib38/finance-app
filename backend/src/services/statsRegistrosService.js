@@ -1,9 +1,10 @@
 const db = require("../database");
 
-// Construye el fragmento de filtro por rango de fechas sobre `created_at`
-// (fecha de alta del registro). Devuelve { clause, params } para concatenar.
+// Construye el fragmento de filtro por rango de fechas sobre `fecha` (la
+// fecha real del movimiento, editable — no `created_at`, que es la de alta).
+// Devuelve { clause, params } para concatenar.
 function rangoFechas({ from, to } = {}, alias = "") {
-  const col = alias ? `${alias}.created_at` : "created_at";
+  const col = alias ? `${alias}.fecha` : "fecha";
   const clause = [];
   const params = [];
   if (from) {
@@ -55,11 +56,29 @@ const getStats = (userUuid, range = {}) => {
         WHERE tipo = 'ingreso' AND user = ?${clause}
         GROUP BY categoria
         ORDER BY COUNT(*) DESC
-        LIMIT 1) AS 'Categoría moda ingresos'
+        LIMIT 1) AS 'Categoría moda ingresos',
+        (SELECT categoria
+        FROM registros
+        WHERE tipo = 'gasto' AND user = ?${clause}
+        GROUP BY categoria
+        ORDER BY SUM(cantidad) DESC
+        LIMIT 1) AS 'Categoría más gastos',
+        (SELECT categoria
+        FROM registros
+        WHERE tipo = 'ingreso' AND user = ?${clause}
+        GROUP BY categoria
+        ORDER BY SUM(cantidad) DESC
+        LIMIT 1) AS 'Categoría más ingresos'
       FROM registros
       WHERE user = ?${clause};
       `,
-      [userUuid, ...params, userUuid, ...params, userUuid, ...params],
+      [
+        userUuid, ...params,
+        userUuid, ...params,
+        userUuid, ...params,
+        userUuid, ...params,
+        userUuid, ...params,
+      ],
       (err, results) => {
         if (err) {
           console.error("Error al obtener stats:", err);
@@ -78,15 +97,14 @@ const getCantidadCategoriasTipo = (userUuid, tipo, range = {}) => {
     db.query(
       `
       SELECT
-        COALESCE(c.id, CONCAT('txt:', r.categoria)) AS 'id',
+        COALESCE(MAX(c.id), CONCAT('txt:', COALESCE(c.nombre, r.categoria))) AS 'id',
         SUM(r.cantidad) AS 'value',
         COALESCE(c.nombre, r.categoria) AS 'label',
-        c.color AS 'color'
+        MAX(c.color) AS 'color'
       FROM registros r
       LEFT JOIN categorias c ON c.id = r.categoria_id
       WHERE r.tipo = ? AND r.user = ?${clause}
-      GROUP BY COALESCE(c.id, CONCAT('txt:', r.categoria)),
-               COALESCE(c.nombre, r.categoria), c.color
+      GROUP BY COALESCE(c.nombre, r.categoria)
       ORDER BY value DESC;
       `,
       [tipo, userUuid, ...params],
@@ -113,7 +131,7 @@ const getTimeline = (userUuid, range = {}) => {
     db.query(
       `
       SELECT
-        DATE_FORMAT(created_at, '%Y-%m') AS periodo,
+        DATE_FORMAT(fecha, '%Y-%m') AS periodo,
         IFNULL(SUM(CASE WHEN tipo = 'ingreso' THEN cantidad ELSE 0 END), 0) AS ingresos,
         IFNULL(SUM(CASE WHEN tipo = 'gasto'   THEN cantidad ELSE 0 END), 0) AS gastos
       FROM registros
@@ -156,8 +174,45 @@ const getTimeline = (userUuid, range = {}) => {
   });
 };
 
+/**
+ * Top N gastos más caros del periodo (registros individuales, no agregados).
+ */
+const getTopGastos = (userUuid, range = {}, limit = 5) => {
+  const { clause, params } = rangoFechas(range, "r");
+  const topLimit = Math.max(1, Math.min(50, Number(limit) || 5));
+  return new Promise((resolve, reject) => {
+    db.query(
+      `
+      SELECT
+        r.id,
+        r.concepto,
+        r.observaciones,
+        r.cantidad,
+        r.fecha,
+        COALESCE(c.nombre, r.categoria) AS categoria,
+        c.color AS color
+      FROM registros r
+      LEFT JOIN categorias c ON c.id = r.categoria_id
+      WHERE r.tipo = 'gasto' AND r.user = ?${clause}
+      ORDER BY r.cantidad DESC
+      LIMIT ?;
+      `,
+      [userUuid, ...params, topLimit],
+      (err, results) => {
+        if (err) {
+          console.error("Error al obtener top gastos:", err);
+          reject(err);
+        } else {
+          resolve(results);
+        }
+      }
+    );
+  });
+};
+
 module.exports = {
   getStats,
   getCantidadCategoriasTipo,
   getTimeline,
+  getTopGastos,
 };

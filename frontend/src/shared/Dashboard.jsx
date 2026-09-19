@@ -4,11 +4,14 @@ import { PieChart, pieArcLabelClasses } from "@mui/x-charts/PieChart";
 import {
   getStatsCantidadCategoria,
   getStatsTimeline,
+  getStatsTopGastos,
 } from "../services/RegistrosService";
 import { HomeFilterContext } from "../context/HomeFilterContext";
 import CardChart from "../shared/CardChart/CardChart";
 import BarChartMeses from "./CardChart/BarChartMeses";
 import BalanceChart from "./CardChart/BalanceChart";
+import BarChartCategoriasGastos from "./CardChart/BarChartCategoriasGastos";
+import TopGastosCard from "./CardChart/TopGastosCard";
 
 const eur = (n) =>
   `${Number(n || 0).toLocaleString("es-ES", { maximumFractionDigits: 0 })} €`;
@@ -39,20 +42,23 @@ function Dashboard() {
   const [rawGastos, setRawGastos] = useState([]);
   const [rawIngresos, setRawIngresos] = useState([]);
   const [timeline, setTimeline] = useState([]);
+  const [topGastos, setTopGastos] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [g, i, t] = await Promise.all([
+        const [g, i, t, top] = await Promise.all([
           getStatsCantidadCategoria("Gastos", range),
           getStatsCantidadCategoria("Ingresos", range),
           getStatsTimeline(range),
+          getStatsTopGastos(range, 5),
         ]);
         if (!cancelled) {
           setRawGastos(mapCat(g.data));
           setRawIngresos(mapCat(i.data));
           setTimeline(Array.isArray(t.data) ? t.data : []);
+          setTopGastos(Array.isArray(top.data) ? top.data : []);
         }
       } catch (error) {
         console.error("Error al obtener stats:", error);
@@ -109,6 +115,8 @@ function Dashboard() {
 
   return (
     <section style={sectionStyle}>
+      <TopGastosCard data={topGastos} />
+
       <div style={{display: "flex", flexDirection: 'row', flexWrap: 'wrap', gap: '30px', justifyContent: "space-between"}}>
         <div style={cardChartStyles}>
           <CardChart
@@ -166,6 +174,8 @@ function Dashboard() {
         </div>
 
       </div>
+
+      <BarChartCategoriasGastos data={rawGastos} />
 
       <BalanceChart data={timeline} />
 

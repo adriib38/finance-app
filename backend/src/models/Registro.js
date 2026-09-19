@@ -40,6 +40,7 @@ class Registro {
       "categoria_id",
       "tipo",
       "cantidad",
+      "fecha",
     ];
 
     const sets = [];
@@ -73,10 +74,13 @@ class Registro {
       categoria_id = null,
       tipo,
       cantidad,
+      // Fecha real del movimiento; si no llega, el DEFAULT de la columna la
+      // fija a hoy (alta con fecha implícita).
+      fecha = null,
     } = newRegistro;
 
     const query =
-      "INSERT INTO registros (id, concepto, observaciones, categoria, categoria_id, tipo, cantidad, user) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+      "INSERT INTO registros (id, concepto, observaciones, categoria, categoria_id, tipo, cantidad, fecha, user) VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURDATE()), ?)";
 
     const params = [
       nuevoId,
@@ -86,6 +90,7 @@ class Registro {
       categoria_id,
       tipo,
       cantidad,
+      fecha,
       userUuid,
     ];
 
@@ -102,6 +107,7 @@ class Registro {
           categoria_id,
           tipo,
           cantidad,
+          fecha,
           userUuid,
         };
         callback(null, nuevoRegistro);
@@ -123,7 +129,7 @@ class Registro {
   }
 
   static getRegistrosFromUser(userUuid, callback) {
-    const query = `SELECT id, concepto, observaciones, tipo, cantidad, categoria, categoria_id, created_at, updated_at FROM registros WHERE user = ?`;
+    const query = `SELECT id, concepto, observaciones, tipo, cantidad, categoria, categoria_id, fecha, created_at, updated_at FROM registros WHERE user = ?`;
     db.query(query, userUuid, (err, results) => {
       if(err) {
         callback(err, null);
