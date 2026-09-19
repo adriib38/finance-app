@@ -84,9 +84,6 @@
   opacity: .9;
 }
 
-#nav-bot:hover {
-  opacity: 1;
-}
 
 .bot-messages {
   flex: 1;

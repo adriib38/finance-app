@@ -35,10 +35,15 @@ function ResumenCards() {
 
   if (!statsResume) return <SkeletonGrid />;
 
+  // Dot de color (verde/rojo) solo en las tarjetas de € de gasto e ingreso,
+  // igual que en las CardChart del dashboard.
+  const dotType = (key) =>
+    key === "Gastos (€)" ? "Gasto" : key === "Ingresos (€)" ? "Ingreso" : undefined;
+
   return (
     <section style={styles}>
       {Object.entries(statsResume).map(([key, value]) => (
-        <StatsCard key={key} title={key} value={value} />
+        <StatsCard key={key} title={key} value={value} type={dotType(key)} />
       ))}
     </section>
   );

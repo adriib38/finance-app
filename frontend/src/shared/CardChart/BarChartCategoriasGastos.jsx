@@ -1,5 +1,6 @@
 import { BarChart } from "@mui/x-charts/BarChart";
 import { useMemo } from "react";
+import RegisterTypeDot from "../RegisterTypeDot";
 import "./index.css";
 
 const eur = (n) =>
@@ -23,7 +24,8 @@ function BarChartCategoriasGastos({ data = [] }) {
   // por categoría, cada una con un único valor en su fila (el resto queda a
   // `undefined`) y todas apiladas en el mismo `stack`: así ocupan la fila
   // entera en vez de repartirse el ancho de la banda como barras agrupadas.
-  const { dataset, series } = useMemo(() => {
+  const { dataset, series, total } = useMemo(() => {
+    const total = data.reduce((acc, d) => acc + Number(d.value || 0), 0);
     const dataset = data.map((d, i) => ({ label: d.label, [`v${i}`]: d.value }));
     const series = data.map((d, i) => ({
       dataKey: `v${i}`,
@@ -32,8 +34,20 @@ function BarChartCategoriasGastos({ data = [] }) {
       stack: "gastos",
       valueFormatter: eur,
     }));
-    return { dataset, series };
+    return { dataset, series, total };
   }, [data]);
+
+  // `barLabel` es una prop del propio <BarChart> (no de cada serie): se
+  // aplica a todas las barras y recibe el item (con su `value`) para poder
+  // calcular el % sobre el total del ranking.
+  const barLabel = (item) => {
+    // Las filas sin valor para esta serie llegan como barra de ancho 0 en el
+    // 0€ (MUI trata el `undefined` del dataset como 0); sin este filtro
+    // también les pondría una etiqueta de "0%" ahí.
+    if (!total || !item.value) return "";
+    const pct = (Number(item.value) / total) * 100;
+    return `${pct.toLocaleString("es-ES", { maximumFractionDigits: 1 })}%`;
+  };
 
   if (dataset.length === 0) {
     return (
@@ -49,6 +63,7 @@ function BarChartCategoriasGastos({ data = [] }) {
   return (
     <article className="cardChart-article">
       <header className="cardChart-header">
+        <RegisterTypeDot t={"Gasto"} />
         <p>Ranking de gastos por categoría</p>
       </header>
 
@@ -58,6 +73,7 @@ function BarChartCategoriasGastos({ data = [] }) {
         yAxis={[{ scaleType: "band", dataKey: "label" }]}
         xAxis={[{ valueFormatter: eur }]}
         series={series}
+        barLabel={barLabel}
         height={Math.max(MIN_HEIGHT, dataset.length * ROW_HEIGHT)}
         margin={{ left: 110 }}
         slots={{ legend: () => null }}

@@ -69,9 +69,9 @@ function Dashboard() {
     };
   }, [range]);
 
-  const gastos = useMemo(() => withLegendTotals(rawGastos), [rawGastos]);
+  //const gastos = useMemo(() => withLegendTotals(rawGastos), [rawGastos]);
   const ingresos = useMemo(() => withLegendTotals(rawIngresos), [rawIngresos]);
-  const arcLabelGastos = useMemo(() => makeArcLabel(rawGastos), [rawGastos]);
+  //const arcLabelGastos = useMemo(() => makeArcLabel(rawGastos), [rawGastos]);
   const arcLabelIngresos = useMemo(() => makeArcLabel(rawIngresos), [rawIngresos]);
 
   const sectionStyle = {
@@ -118,6 +118,7 @@ function Dashboard() {
       <TopGastosCard data={topGastos} />
 
       <div style={{display: "flex", flexDirection: 'row', flexWrap: 'wrap', gap: '30px', justifyContent: "space-between"}}>
+        {/*
         <div style={cardChartStyles}>
           <CardChart
             type={"Gasto"}
@@ -144,7 +145,7 @@ function Dashboard() {
               )
             }
           ></CardChart>
-        </div>
+        </div>*/}
 
         <div style={cardChartStyles}>
           <CardChart

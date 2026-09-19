@@ -1,5 +1,4 @@
 import { useState, useContext, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { AuthContext } from "../../context/AuthContext";
 
@@ -37,14 +36,15 @@ export function MenuUser({ onNavigate }) {
   }, [open]);
 
   // Avatar genérico por defecto (silueta "mystery person" de Gravatar).
-  const srcImage = "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&s=200";
+  const srcImage = "profile.jpeg";
 
 
   const imgProfileStyle = {
+    width: 52,
+    height: 52,
     borderRadius: "50%",
-    width: 50,
-    border: "1px solid blue",
     cursor: "pointer",
+  
   };
 
   const ulStyle = {
@@ -92,15 +92,11 @@ export function MenuUser({ onNavigate }) {
         >
           <EntidadLi>@{userInfo.username}</EntidadLi>
           <hr></hr>
-          <EntidadLi style={{ cursor: "pointer" }}>
-            <Link
+          <EntidadLi style={{ cursor: "pointer", color: "black" }}
               to="/categorias"
-              onClick={handleNavigate}
-            >
-              Categorías
-            </Link>
+              onClick={handleNavigate}>
+                Categorías
           </EntidadLi>
-          <hr></hr>
           <EntidadLi style={{ color: "red", cursor: "pointer" }} onClick={handleLogout}>
               Logout
           </EntidadLi>

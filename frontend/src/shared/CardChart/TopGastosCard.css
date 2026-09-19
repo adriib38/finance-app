@@ -11,6 +11,12 @@
     display: flex;
     align-items: center;
     gap: 14px;
+    padding: 6px 10px;
+}
+
+.topGastos-item:hover {
+    background: hsl(30, 100%, 98%);
+    border-radius: 6px;
 }
 
 .topGastos-rank {
