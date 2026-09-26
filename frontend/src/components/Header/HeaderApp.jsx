@@ -69,6 +69,20 @@ function HeaderApp() {
         <li>
           {isAuthenticated && (
             <NavLink
+              id="nav-inversiones"
+              className={({ isActive }) => {
+                return isActive ? "isActive" : "";
+              }}
+              to="/inversiones"
+              onClick={closeMenu}
+            >
+              📈 Inversiones
+            </NavLink>
+          )}
+        </li>
+        <li>
+          {isAuthenticated && (
+            <NavLink
               id="nav-bot"
               className={({ isActive }) => {
                 return isActive ? "isActive" : "";

@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS registros (
   categoria_id  VARCHAR(36)   NULL,          -- enlace a la tabla maestra
   tipo          VARCHAR(20),
   cantidad      DECIMAL(12,2) NOT NULL DEFAULT 0,
+  fecha         DATE          NOT NULL DEFAULT (CURDATE()), -- fecha real del gasto/ingreso (editable, independiente de created_at)
   user          VARCHAR(36)   NOT NULL,
   created_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -63,8 +64,9 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 
 - La app es de un solo usuario: todos los registros son suyos, NO filtres por \`user\`.
 - \`cantidad\` es siempre positiva. Balance de un periodo = SUM(cantidad WHERE tipo='ingreso') - SUM(cantidad WHERE tipo='gasto').
-- Filtra por fecha con \`created_at\`, p. ej.: \`WHERE created_at >= '2026-07-01' AND created_at < '2026-08-01'\`.
-- Para agrupar por mes: \`DATE_FORMAT(created_at, '%Y-%m')\`.
+- \`fecha\` es la fecha real del gasto/ingreso (editable). \`created_at\` es solo la fecha de alta en la BD; NO la uses para filtrar ni para interpretar fechas que dé el usuario.
+- Filtra por fecha con \`fecha\`, p. ej.: \`WHERE fecha >= '2026-07-01' AND fecha < '2026-08-01'\`.
+- Para agrupar por mes: \`DATE_FORMAT(fecha, '%Y-%m')\`.
 - Puedes unir \`registros\` con \`categorias\` por \`categoria_id\`, o usar el texto \`registros.categoria\`.
 - NO consultes ni modifiques la tabla \`users\` ni esquemas del sistema (information_schema, mysql, performance_schema, sys).
 - Hoy es ${hoy}.
@@ -73,10 +75,12 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 
 - Usa \`insertar_bd\` solo si el usuario pide claramente añadir un gasto/ingreso.
 - **Para la columna \`user\` usa siempre \`@uid\`** (una variable de sesión que fija el backend); NUNCA un uuid literal.
-- \`id\` con \`UUID()\`. \`created_at\` / \`updated_at\` se rellenan solos.
+- \`id\` con \`UUID()\`. \`created_at\` / \`updated_at\` se rellenan solos: NUNCA los incluyas en el INSERT ni les asignes un valor.
+- Si el usuario indica la fecha del gasto/ingreso (p. ej. "el 19/06/2026" o una lista de fechas), ponla en la columna \`fecha\` (formato \`YYYY-MM-DD\`). Si no indica fecha, omite la columna \`fecha\` y se usará hoy por defecto. \`fecha\` NUNCA es \`created_at\`.
 - \`tipo\` debe ser \`'gasto'\` o \`'ingreso'\`. \`cantidad\` positiva.
 - Pon \`categoria\` (texto) y, si conoces su \`id\`, también \`categoria_id\` (consulta \`categorias\` antes si hace falta).
-- Ejemplo: \`INSERT INTO registros (id, concepto, observaciones, categoria, categoria_id, tipo, cantidad, user) VALUES (UUID(), 'Cena', 'con amigos', 'Ocio', NULL, 'gasto', 24.50, @uid)\`
+- Si el usuario pide crear varios registros a la vez (p. ej. una lista de fechas/importes), haz una llamada a \`insertar_bd\` por cada registro, cada una con su propia \`fecha\`.
+- Ejemplo: \`INSERT INTO registros (id, concepto, observaciones, categoria, categoria_id, tipo, cantidad, fecha, user) VALUES (UUID(), 'Cena', 'con amigos', 'Ocio', NULL, 'gasto', 24.50, '2026-06-19', @uid)\`
 
 ## Cómo responder
 

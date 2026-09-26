@@ -37,8 +37,10 @@ const TOOLS = [
         "Úsala para crear nuevos registros (gastos/ingresos) o categorías. " +
         "Solo se admiten sentencias INSERT; cualquier otra cosa (SELECT, UPDATE, DELETE, DDL, SET, ...) se rechaza. " +
         "IMPORTANTE: para la columna `user` usa SIEMPRE la variable `@uid` (no un uuid literal); el backend la fija a partir del usuario autenticado. " +
-        "Ejemplo: INSERT INTO registros (id, concepto, observaciones, categoria, categoria_id, tipo, cantidad, user) " +
-        "VALUES (UUID(), 'Cena', 'restaurante', 'Ocio', NULL, 'gasto', 24.50, @uid). " +
+        "IMPORTANTE: si el usuario indica la fecha del gasto/ingreso (p. ej. '19/06/2026' o una lista de fechas), inclúyela en la columna `fecha` (formato YYYY-MM-DD). " +
+        "`fecha` es la fecha real del movimiento; NUNCA la omitas cuando el usuario da una fecha, y NUNCA la confundas con `created_at`/`updated_at` (auditoría automática de la fila, no se incluyen en el INSERT). " +
+        "Ejemplo: INSERT INTO registros (id, concepto, observaciones, categoria, categoria_id, tipo, cantidad, fecha, user) " +
+        "VALUES (UUID(), 'Cena', 'restaurante', 'Ocio', NULL, 'gasto', 24.50, '2026-06-19', @uid). " +
         "Dialecto MariaDB. Una sola sentencia, sin ';' final.",
       parameters: {
         type: "object",

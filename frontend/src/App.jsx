@@ -5,6 +5,7 @@ import "./App.css";
 import "./index.css";
 import CrearRegistro from "./components/CrearRegistro/CrearRegistro";
 import Categorias from "./components/Categorias/Categorias";
+import Inversiones from "./components/Inversiones/Inversiones";
 import Bot from "./components/Bot/Bot";
 import { RegistrosContextProvider } from "./context/RegistrosContext";
 import { CategoriasContextProvider } from "./context/CategoriasContext";
@@ -57,6 +58,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Categorias />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/inversiones"
+                element={
+                  <ProtectedRoute>
+                    <Inversiones />
                   </ProtectedRoute>
                 }
               />

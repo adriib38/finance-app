@@ -42,8 +42,12 @@ app.use("/status", async (req, res) => {
 app.use("/api/v1", require("./v1/routes/auth"));
 app.use("/api/v1/categorias", require("./v1/routes/categorias"));
 app.use("/api/v1/ai", require("./v1/routes/ai"));
-app.use("/api/v1", require("./v1/routes/registros"));
 app.use("/api/v1/stats", require("./v1/routes/stats"));
+// Antes de registros: su router va montado en la raíz "/api/v1" y define
+// GET /:id, que si va primero intercepta "/api/v1/inversiones" tratando
+// "inversiones" como el id (devuelve 200 vacío en vez de llegar aquí).
+app.use("/api/v1/inversiones", require("./v1/routes/inversiones"));
+app.use("/api/v1", require("./v1/routes/registros"));
 
 // Error handler para rutas no encontradas
 app.use((req, res, next) => {
