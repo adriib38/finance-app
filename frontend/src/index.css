@@ -88,6 +88,3 @@ input[type='radio'] {
   cursor: pointer;
 }
 
-.isActive {
-  text-decoration: underline dotted;
-}

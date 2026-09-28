@@ -13,94 +13,119 @@ import { CategoriasContextProvider } from "./context/CategoriasContext";
 import { SuscripcionesContextProvider } from "./context/SuscripcionesContext";
 import SigninForm from "./components/auth/SigninForm";
 import HeaderApp from "./components/Header/HeaderApp";
-import { AuthContextProvider } from "./context/AuthContext";
+import { AuthContextProvider, AuthContext } from "./context/AuthContext";
 import ProtectedRoute from "./shared/ProtectedRoute";
 import PublicRoute from "./shared/PublicRoute";
+import { useContext } from "react";
+import CircularProgress from "@mui/material/CircularProgress";
 
-function App() {
+function NotFound() {
+  return <h1>404</h1>;
+}
 
-  function NotFound() {
-    return <h1>404</h1>;
+function AppLoading() {
+  return (
+    <div className="app-loading">
+      <div className="top-accent-bar" aria-hidden="true" />
+      <CircularProgress />
+    </div>
+  );
+}
+
+function Layout() {
+  const { isAuthenticated, loading } = useContext(AuthContext);
+
+  // Evita el parpadeo del header de invitado mientras se confirma la sesión.
+  if (loading) {
+    return <AppLoading />;
   }
 
+  return (
+    <div className={`app-shell${isAuthenticated ? " app-shell--nav" : ""}`}>
+      <HeaderApp />
+      <div id="content">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Inicio />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/list"
+            element={
+              <ProtectedRoute>
+                <ListaRegistros />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/new"
+            element={
+              <ProtectedRoute>
+                <CrearRegistro />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/categorias"
+            element={
+              <ProtectedRoute>
+                <Categorias />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inversiones"
+            element={
+              <ProtectedRoute>
+                <Inversiones />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/suscripciones"
+            element={
+              <ProtectedRoute>
+                <Suscripciones />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bot"
+            element={
+              <ProtectedRoute>
+                <Bot />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <SigninForm />
+              </PublicRoute>
+            }
+          />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </div>
+    </div>
+  );
+}
+
+function App() {
   return (
     <BrowserRouter>
       <AuthContextProvider>
         <CategoriasContextProvider>
-        <SuscripcionesContextProvider>
-        <RegistrosContextProvider>
-          <HeaderApp />
-          <div id="content">
-            <Routes>
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <Inicio />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/list"
-                element={
-                  <ProtectedRoute>
-                    <ListaRegistros />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/new"
-                element={
-                  <ProtectedRoute>
-                    <CrearRegistro />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/categorias"
-                element={
-                  <ProtectedRoute>
-                    <Categorias />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/inversiones"
-                element={
-                  <ProtectedRoute>
-                    <Inversiones />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/suscripciones"
-                element={
-                  <ProtectedRoute>
-                    <Suscripciones />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/bot"
-                element={
-                  <ProtectedRoute>
-                    <Bot />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/login"
-                element={
-                  <PublicRoute>
-                    <SigninForm />
-                  </PublicRoute>
-                }
-              />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </div>
-        </RegistrosContextProvider>
-        </SuscripcionesContextProvider>
+          <SuscripcionesContextProvider>
+            <RegistrosContextProvider>
+              <Layout />
+            </RegistrosContextProvider>
+          </SuscripcionesContextProvider>
         </CategoriasContextProvider>
       </AuthContextProvider>
     </BrowserRouter>
