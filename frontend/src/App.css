@@ -1,3 +1,23 @@
+/* Franja de marca fija en la parte superior de la página, visible en
+   cualquier estado (cargando, invitado o con sesión). */
+.top-accent-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: #0307d6;
+    z-index: 200;
+    pointer-events: none;
+}
+
+.app-loading {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 #content {
     max-width: 1100px;
     margin: 40px auto 100px;

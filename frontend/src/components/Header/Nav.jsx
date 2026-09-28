@@ -78,6 +78,8 @@ function Nav() {
 
   return (
     <>
+      <div className="top-accent-bar" aria-hidden="true" />
+
       <div id="mobile-topbar">
         <button
           type="button"

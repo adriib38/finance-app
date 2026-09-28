@@ -12,14 +12,17 @@ function HeaderApp() {
   }
 
   return (
-    <header id="guest-topbar">
-      <NavLink to="/" className="brand-link">
-        CashFlow
-      </NavLink>
-      <NavLink id="nav-login" to="/login">
-        Login
-      </NavLink>
-    </header>
+    <>
+      <div className="top-accent-bar" aria-hidden="true" />
+      <header id="guest-topbar">
+        <NavLink to="/" className="brand-link">
+          CashFlow
+        </NavLink>
+        <NavLink id="nav-login" to="/login">
+          Login
+        </NavLink>
+      </header>
+    </>
   );
 }
 

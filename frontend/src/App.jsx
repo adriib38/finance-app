@@ -17,13 +17,28 @@ import { AuthContextProvider, AuthContext } from "./context/AuthContext";
 import ProtectedRoute from "./shared/ProtectedRoute";
 import PublicRoute from "./shared/PublicRoute";
 import { useContext } from "react";
+import CircularProgress from "@mui/material/CircularProgress";
 
 function NotFound() {
   return <h1>404</h1>;
 }
 
+function AppLoading() {
+  return (
+    <div className="app-loading">
+      <div className="top-accent-bar" aria-hidden="true" />
+      <CircularProgress />
+    </div>
+  );
+}
+
 function Layout() {
-  const { isAuthenticated } = useContext(AuthContext);
+  const { isAuthenticated, loading } = useContext(AuthContext);
+
+  // Evita el parpadeo del header de invitado mientras se confirma la sesión.
+  if (loading) {
+    return <AppLoading />;
+  }
 
   return (
     <div className={`app-shell${isAuthenticated ? " app-shell--nav" : ""}`}>
