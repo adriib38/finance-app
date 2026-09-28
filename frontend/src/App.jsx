@@ -6,9 +6,11 @@ import "./index.css";
 import CrearRegistro from "./components/CrearRegistro/CrearRegistro";
 import Categorias from "./components/Categorias/Categorias";
 import Inversiones from "./components/Inversiones/Inversiones";
+import Suscripciones from "./components/Suscripciones/Suscripciones";
 import Bot from "./components/Bot/Bot";
 import { RegistrosContextProvider } from "./context/RegistrosContext";
 import { CategoriasContextProvider } from "./context/CategoriasContext";
+import { SuscripcionesContextProvider } from "./context/SuscripcionesContext";
 import SigninForm from "./components/auth/SigninForm";
 import HeaderApp from "./components/Header/HeaderApp";
 import { AuthContextProvider } from "./context/AuthContext";
@@ -25,6 +27,7 @@ function App() {
     <BrowserRouter>
       <AuthContextProvider>
         <CategoriasContextProvider>
+        <SuscripcionesContextProvider>
         <RegistrosContextProvider>
           <HeaderApp />
           <div id="content">
@@ -70,6 +73,14 @@ function App() {
                 }
               />
               <Route
+                path="/suscripciones"
+                element={
+                  <ProtectedRoute>
+                    <Suscripciones />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/bot"
                 element={
                   <ProtectedRoute>
@@ -89,6 +100,7 @@ function App() {
             </Routes>
           </div>
         </RegistrosContextProvider>
+        </SuscripcionesContextProvider>
         </CategoriasContextProvider>
       </AuthContextProvider>
     </BrowserRouter>
