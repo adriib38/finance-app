@@ -8,6 +8,7 @@ import Categorias from "./components/Categorias/Categorias";
 import Inversiones from "./components/Inversiones/Inversiones";
 import Suscripciones from "./components/Suscripciones/Suscripciones";
 import Bot from "./components/Bot/Bot";
+import BotWidget from "./components/Bot/BotWidget";
 import { RegistrosContextProvider } from "./context/RegistrosContext";
 import { CategoriasContextProvider } from "./context/CategoriasContext";
 import { SuscripcionesContextProvider } from "./context/SuscripcionesContext";
@@ -112,6 +113,7 @@ function Layout() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
+      {isAuthenticated && <BotWidget />}
     </div>
   );
 }

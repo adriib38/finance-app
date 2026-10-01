@@ -9,9 +9,9 @@ const NAV_SECTIONS = [
   {
     title: "General",
     items: [
+       { to: "/new", label: "Nuevo registro", icon: "➕", cta: false },
       { to: "/", label: "Inicio", icon: "🏠", end: true },
       { to: "/list", label: "Registros", icon: "📋", badge: true },
-      { to: "/new", label: "Nuevo registro", icon: "➕", cta: true },
     ],
   },
   {
@@ -99,7 +99,7 @@ function Nav() {
 
       <nav id="app-nav" ref={navRef} className={open ? "open" : ""}>
         <NavLink to="/" className="brand-link" onClick={close}>
-          <span aria-hidden="true">💸</span> CashFlow
+        CashFlow
         </NavLink>
 
         <div className="nav-scroll">

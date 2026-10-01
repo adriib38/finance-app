@@ -41,8 +41,8 @@ function BarChartMeses({ data = [] }) {
         dataset={dataset}
         xAxis={[{ scaleType: "band", dataKey: "month" }]}
         series={[
-          { dataKey: "gasto", label: "Gasto", color: "#e0274c", valueFormatter },
-          { dataKey: "ingreso", label: "Ingreso", color: "#27e058", valueFormatter },
+          { dataKey: "gasto", label: "Gasto", color: "#c00127", valueFormatter },
+          { dataKey: "ingreso", label: "Ingreso", color: "#0ca535", valueFormatter },
         ]}
         {...chartSetting}
       />

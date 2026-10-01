@@ -1,5 +1,5 @@
 function RegisterTypeDot({ t }) {
-  let color = t.toLowerCase() === "ingreso" ? "#27E058" : "#E0274C";
+  let color = t.toLowerCase() === "ingreso" ? "#0ca535" : "#c00127";
 
   const spanStyle = {
     display: "inline-block",
