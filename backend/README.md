@@ -43,6 +43,7 @@ Plantilla completa en [`.env.example`](./.env.example) — `cp .env.example .env
 |---|---|
 | `PORT` | Puerto del servidor (por defecto `3000`) |
 | `DB_HOST` | Host de la BD |
+| `DB_PORT` | Puerto de la BD (opcional, por defecto `3306`). Útil si tienes varios MariaDB en la misma máquina |
 | `DB_USER` | Usuario de la BD |
 | `DB_PASSWORD` | Contraseña de la BD |
 | `DB_DATABASE` | Nombre de la base de datos |
@@ -50,6 +51,7 @@ Plantilla completa en [`.env.example`](./.env.example) — `cp .env.example .env
 | `SALT_ROUNDS` | Rondas de `bcrypt` (por defecto `10`) |
 | `ADMIN_USERNAME` | Usuario de la única cuenta (por defecto `admin`) |
 | `ADMIN_PASSWORD` | Contraseña de la única cuenta (**obligatoria**) |
+| `ALLOWED_ORIGINS` | Orígenes CORS extra, lista separada por comas (opcional). Se suman a los fijos en `app.js` (`localhost:3006`) |
 | `OPENAI_API_KEY` | API key de OpenAI para el bot IA (`/api/v1/ai/ask`). Si falta, ese endpoint responde `503` y el resto de la API funciona igual |
 | `AI_MODEL` | Modelo del bot (por defecto `gpt-4o-mini`) |
 | `DB_RO_USER` / `DB_RO_PASSWORD` | Usuario MySQL de **solo lectura** para la tool SQL del bot. Si faltan, se usa `DB_USER` con un aviso |
@@ -79,6 +81,25 @@ Si algo falla en el arranque, el proceso sale con código `1`. Una vez arriba,
 el servidor repite el paso 4 cada hora mientras siga vivo (`setInterval` en
 `main.js`), para cubrir el caso de que no se reinicie durante meses.
 
+### Entorno de pruebas (BD separada)
+
+Para desarrollar sin riesgo de tocar datos reales, el backend admite un
+segundo fichero de entorno `.env.test` (plantilla en
+[`.env.test.example`](./.env.test.example)) que apunta a una BD distinta.
+Se carga con [`dotenv-cli`](https://www.npmjs.com/package/dotenv-cli) en vez
+de con el `require("dotenv").config()` habitual, así que no hace falta tocar
+ningún fichero de `src/` para cambiar de entorno:
+
+```bash
+cp .env.test.example .env.test   # ajusta DB_HOST/DB_PORT si tu BD de test no es la por defecto
+npm run start:test               # PORT/DB_* de .env.test — migra y siembra igual que start
+npm run migrate:test             # solo migraciones, contra .env.test
+```
+
+Detalle completo (cómo crear el contenedor de BD de pruebas, arrancar
+frontend + backend juntos, sembrar datos ficticios) en el
+[README.md de la raíz § Entorno de pruebas](../README.md#-entorno-de-pruebas-aislado-de-tus-datos-reales).
+
 ---
 
 ## Estructura
@@ -93,7 +114,8 @@ src/
 ├── seedCategorias.js           # categorías base
 ├── migrations/                 # 001_*.sql, 004_*.js, ... (ordenadas por nombre)
 ├── scripts/
-│   ├── seedTestData.js         # genera registros ficticios (dev)
+│   ├── seedTestData.js          # N registros ficticios aleatorios por 2026 (dev/test)
+│   ├── seedDemoOctubre2026.js   # ~25 registros fijos y realistas, solo octubre 2026 (dev/test)
 │   └── procesarSuscripciones.js # dispara el motor de suscripciones a mano
 ├── v1/routes/
 │   ├── auth.js                 # /api/v1  (signin, signout, user)
@@ -146,7 +168,8 @@ inicializar una BD desde cero).
   Único: `(user, tipo, nombre)`.
 - **`registros`** — `id` (PK), `concepto`, `observaciones`, `categoria` (texto
   denormalizado), `categoria_id` (FK → `categorias.id`, `ON DELETE SET NULL`),
-  `tipo`, `cantidad` (`DECIMAL(12,2)`), `user` (FK → `users.uuid`),
+  `tipo`, `cantidad` (`DECIMAL(12,2)`), `fecha` (`DATE`, editable — la fecha
+  real del movimiento, por defecto `CURDATE()`), `user` (FK → `users.uuid`),
   `created_at`, `updated_at` (automático `ON UPDATE CURRENT_TIMESTAMP`).
 - **`suscripciones`** — `id` (PK), `nombre`, `categoria_id` (FK →
   `categorias.id`, `ON DELETE SET NULL`), `tipo` (`gasto`|`ingreso`),
@@ -157,6 +180,13 @@ inicializar una BD desde cero).
   `registro_id` (FK → `registros.id`, `ON DELETE SET NULL`), `created_at`.
   Único: `(suscripcion_id, periodo)` — ver
   [Suscripciones recurrentes](#suscripciones-recurrentes).
+- **`inversiones`** — posiciones de inversión (acciones/ETFs): `id` (PK),
+  `ticker`, `nombre`, `tipo` (`accion`|`etf`), `participaciones`,
+  `precio_compra`, `importe` (= `participaciones * precio_compra`, calculado
+  por el backend), `fecha`, `observaciones`, `user` (FK → `users.uuid`),
+  `created_at`, `updated_at`. Expuesta en `/api/v1/inversiones`
+  (`src/controllers/inversionesController.js`) — endpoints sin documentar
+  todavía en este README, ver el controlador para el contrato exacto.
 - **`schema_migrations`** — `name` (PK), `applied_at`. Control de migraciones.
 
 > `registros.categoria` (texto) se mantiene **sincronizado** con
@@ -175,11 +205,23 @@ inicializar una BD desde cero).
 
 ### Datos de prueba (dev)
 
+Dos scripts, para dos necesidades distintas. **Ambos se niegan a ejecutarse
+si `DB_DATABASE` no contiene `"test"`**, para no poder rellenar producción
+con datos ficticios por error — están pensados para correr con
+`npm run ... ` (carga `.env.test` vía `dotenv-cli`, ver
+[Entorno de pruebas](#entorno-de-pruebas-bd-separada)).
+
 ```bash
-node src/scripts/seedTestData.js 250          # 250 registros ficticios repartidos por 2026
-node src/scripts/seedTestData.js 250 --reset  # borra los ficticios previos y regenera
+# Volumen: N registros aleatorios repartidos por todo 2026 (para probar
+# listados/gráficas con muchos datos). observaciones con prefijo "[seed]".
+npm run seed:random -- 250          # añade 250
+npm run seed:random -- 250 --reset  # borra los "[seed]" previos y regenera
+
+# Demo legible: ~25 registros fijos y realistas, solo octubre 2026 (para
+# probar un mes concreto sin ruido). Reemplaza (borra + reinserta) solo los
+# registros del admin dentro de ese rango, así que repetirlo no duplica.
+npm run seed:demo-octubre
 ```
-Los ficticios llevan `observaciones` con prefijo `[seed]`.
 
 ---
 
@@ -243,7 +285,10 @@ npm run suscripciones:procesar   # fuerza la reconciliación sin esperar al arra
 
 ### CORS
 
-`app.js` sólo permite el origen **`http://localhost:3006`** y `credentials: true`.
+`app.js` permite por defecto **`http://localhost:3006`** (y una IP Tailscale
+fija) con `credentials: true`. La variable opcional `ALLOWED_ORIGINS`
+(lista separada por comas en el `.env`) añade orígenes extra sin tocar
+código — por ejemplo el frontend del entorno de pruebas, puerto `3007`.
 Las peticiones **sin cabecera `Origin`** (p. ej. `curl`, Postman) se permiten.
 
 ---
@@ -370,7 +415,14 @@ suscripción).
 
 ### Registros — `/api/v1` 🔒
 
-Objeto **registro** (en `/misregistros`): `{ id, concepto, observaciones, tipo, cantidad, categoria, categoria_id, created_at, updated_at }`.
+Objeto **registro** (en `/misregistros`): `{ id, concepto, observaciones, tipo, cantidad, categoria, categoria_id, fecha, created_at, updated_at }`.
+
+> `fecha` (`DATE`) es la fecha real del movimiento, **editable** e
+> independiente de `created_at`/`updated_at` (que son solo auditoría
+> automática de la fila — p. ej. si el domingo cargas los gastos de toda la
+> semana, cada uno lleva su propia `fecha`). Si no se envía al crear, toma
+> `CURDATE()` por defecto. Los filtros de `/stats` (ver más abajo) usan esta
+> columna, no `created_at`.
 
 #### `GET /api/v1/misregistros`
 Registros del usuario autenticado.
@@ -380,16 +432,16 @@ Registros del usuario autenticado.
 #### `POST /api/v1/`
 Crea un registro. **La categoría debe existir en la tabla maestra.**
 
-- **Body**: `{ "concepto": string, "observaciones": string, "categoria_id": string, "tipo": "gasto"|"ingreso", "cantidad": number }`
+- **Body**: `{ "concepto": string, "observaciones": string, "categoria_id": string, "tipo": "gasto"|"ingreso", "cantidad": number, "fecha"?: "YYYY-MM-DD" }`
 - **Respuestas**:
   - `201` → `{ "message": "Created succesfull", "newRegistro": { … } }`
-  - `400` → faltan campos, `categoria_id` no existe, o su `tipo` no coincide con el del registro
-- `created_at` = `updated_at` = ahora. No hay fecha editable.
+  - `400` → faltan campos, `fecha` no es `YYYY-MM-DD`, `categoria_id` no existe, o su `tipo` no coincide con el del registro
+- `fecha` por defecto `CURDATE()` si no se envía. `created_at` = `updated_at` = ahora (automáticos, no editables).
 
 #### `PUT /api/v1/:id`
 Actualización parcial. Sólo el propietario.
 
-- **Body**: cualquiera de `{ "concepto"?, "observaciones"?, "categoria_id"? | "categoria"?, "tipo"?, "cantidad"? }`
+- **Body**: cualquiera de `{ "concepto"?, "observaciones"?, "categoria_id"? | "categoria"?, "tipo"?, "cantidad"?, "fecha"? }`
   - Con `categoria_id` se re-enlaza a la maestra y se sincroniza el texto.
   - Con `categoria` (texto) se guarda el texto y `categoria_id` pasa a `NULL`.
 - **Respuestas**:
@@ -429,7 +481,8 @@ Sólo el propietario.
 
 Todas aceptan un **rango de fechas opcional** por query string:
 `?from=YYYY-MM-DD&to=YYYY-MM-DD` (se validan con regex ISO; se filtra por
-`DATE(created_at)`). Sin rango → sobre todos los registros del usuario.
+`DATE(fecha)`, la fecha real del movimiento — no `created_at`). Sin rango →
+sobre todos los registros del usuario.
 
 #### `GET /api/v1/stats/resume`
 Resumen numérico.
@@ -468,7 +521,7 @@ Serie mensual: ingresos, gastos y **balance = ingresos − gastos** por mes.
   { "periodo": "2026-02", "ingresos":  541.56, "gastos": 3765.45, "balance": -3223.89 }
 ]
 ```
-- `GROUP BY DATE_FORMAT(created_at, '%Y-%m')`.
+- `GROUP BY DATE_FORMAT(fecha, '%Y-%m')`.
 - Si se pasan **`from` y `to`**, rellena con `0` los meses del rango sin datos.
 - Todos los importes ya vienen como números redondeados a 2 decimales.
 

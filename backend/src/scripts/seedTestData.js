@@ -1,11 +1,14 @@
 /**
- * Genera registros ficticios de prueba repartidos por todo 2026.
+ * Genera registros ficticios ALEATORIOS repartidos por todo 2026 (volumen,
+ * para probar listados/gráficas con muchos datos). Para un mes concreto con
+ * datos fijos y legibles, usa src/scripts/seedDemoOctubre2026.js en su lugar.
  *
- *   node src/scripts/seedTestData.js [n]        # añade n registros (por defecto 250)
- *   node src/scripts/seedTestData.js [n] --reset  # borra antes los ficticios previos
+ *   npm run seed:random -- [n]           # añade n registros (por defecto 250)
+ *   npm run seed:random -- [n] --reset   # borra antes los ficticios previos
  *
  * Los registros ficticios llevan observaciones que empiezan por "[seed]" para
- * poder borrarlos luego sin tocar los reales.
+ * poder borrarlos luego sin tocar los reales. Se niega a correr si
+ * DB_DATABASE no contiene "test" (ver guardarraíl más abajo).
  */
 const { v4: uuid } = require("uuid");
 const pool = require("../database");
@@ -55,6 +58,15 @@ function conceptosKey(nombre, tipo) {
 }
 
 async function main() {
+  const dbName = process.env.DB_DATABASE || "";
+  if (!dbName.toLowerCase().includes("test")) {
+    throw new Error(
+      `DB_DATABASE="${dbName}" no parece una base de datos de pruebas (no contiene ` +
+        `"test"). Aborto para no rellenar producción con datos ficticios por error. ` +
+        `Usa "npm run seed:random -- 250" (carga backend/.env.test).`
+    );
+  }
+
   const n = Number(process.argv.find((a) => /^\d+$/.test(a))) || 250;
   const reset = process.argv.includes("--reset");
   const db = pool.promise();
@@ -97,6 +109,7 @@ async function main() {
       cat.id,
       cat.tipo,
       cantidad,
+      ts.slice(0, 10), // fecha: la del movimiento, no cambia aunque se "edite"
       ADMIN_UUID,
       ts,
       updated < ts ? ts : updated,
@@ -105,7 +118,7 @@ async function main() {
 
   await db.query(
     `INSERT INTO registros
-       (id, concepto, observaciones, categoria, categoria_id, tipo, cantidad, user, created_at, updated_at)
+       (id, concepto, observaciones, categoria, categoria_id, tipo, cantidad, fecha, user, created_at, updated_at)
      VALUES ?`,
     [rows]
   );

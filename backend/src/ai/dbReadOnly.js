@@ -25,6 +25,7 @@ if (!roUser) {
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
+  port: process.env.DB_PORT ? Number(process.env.DB_PORT) : undefined,
   user: roUser || process.env.DB_USER,
   password: roUser ? roPass || "" : process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE,

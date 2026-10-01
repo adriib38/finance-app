@@ -38,7 +38,9 @@ backend/            API REST (Express) — ver backend/README.md para el detalle
   Dockerfile           imagen del backend
 frontend/           SPA (React)
 docker-compose.yml   backend + base de datos MariaDB, listos con un solo comando
-scripts/             script de arranque conjunto para desarrollo local (sin Docker)
+scripts/
+  start-app.sh          arranque conjunto para desarrollo local (sin Docker) — entorno normal
+  start-test.sh         ídem, pero contra el entorno de pruebas aislado (ver más abajo)
 ```
 
 ## 🚀 Levantar el proyecto en local
@@ -109,8 +111,13 @@ npm install
 PORT=3006 BROWSER=none npm start
 ```
 
-> ⚠️ El backend solo permite CORS desde `http://localhost:3006`, así que el
-> frontend debe correr en ese puerto exacto en local.
+> ⚠️ El backend solo permite CORS desde `http://localhost:3006` por defecto
+> (ampliable con `ALLOWED_ORIGINS`), así que el frontend debe correr en ese
+> puerto exacto en local salvo que cambies esa variable.
+
+`API_BASE_URL` también se puede fijar con la variable `REACT_APP_API_BASE_URL`
+al arrancar, sin tocar `env.js` — así es como funciona el entorno de pruebas
+(ver más abajo).
 
 ### Alternativa: script único
 
@@ -125,6 +132,69 @@ automáticamente.
 
 Toda la referencia de variables de entorno, endpoints, esquema de BD y
 migraciones está documentada en **[backend/README.md](./backend/README.md)**.
+
+## 🧪 Entorno de pruebas (aislado de tus datos reales)
+
+Si ya tienes la app levantada con datos de verdad (el flujo de arriba, lo que
+este repo llama "producción" aunque sea solo tu máquina), **no reutilices esa
+base de datos para desarrollar**: una migración mal escrita, un `DELETE` de
+más al probar, o un seed de datos ficticios acabarían mezclados con tus
+movimientos reales. La solución es un segundo contenedor de BD, totalmente
+separado, con sus propios puerto, credenciales y volumen.
+
+| | Normal / producción | Pruebas |
+|---|---|---|
+| Contenedor BD | `finance-db` | `finance-db-test` |
+| Puerto BD | `3306` | `3307` |
+| Puerto backend | `4000` | `4001` |
+| Puerto frontend | `3006` | `3007` |
+| Backend usa | `backend/.env` | `backend/.env.test` |
+| Arranque | `scripts/start-app.sh` | `scripts/start-test.sh` |
+
+### 1. Crear el contenedor de BD de pruebas (una sola vez)
+
+```bash
+docker run -d --name finance-db-test \
+  -e MYSQL_ROOT_PASSWORD=finance_test -e MYSQL_DATABASE=finance_test \
+  -e MYSQL_USER=finance_test -e MYSQL_PASSWORD=finance_test \
+  -p 3307:3306 -v finance-db-test-data:/var/lib/mysql mariadb:10.6
+```
+
+### 2. Configurar el backend de pruebas
+
+```bash
+cd backend
+cp .env.test.example .env.test   # ya viene apuntando a finance-db-test/3307/4001
+```
+
+### 3. Arrancar todo junto
+
+```bash
+./scripts/start-test.sh
+```
+
+Arranca (o reanuda si ya existe) `finance-db-test`, el backend en el puerto
+`4001` (aplica migraciones y siembra la cuenta admin igual que en
+producción, pero contra la BD de pruebas) y el frontend en el `3007` apuntando
+a ese backend. Entra con `admin` / la contraseña que pusieras en
+`ADMIN_PASSWORD` dentro de `.env.test`.
+
+### 4. Rellenar con datos ficticios (opcional)
+
+```bash
+cd backend
+npm run seed:demo-octubre   # ~25 registros realistas, fijos, solo octubre 2026
+npm run seed:random -- 250  # 250 registros aleatorios repartidos por 2026 (volumen)
+```
+
+Ambos se niegan a ejecutarse si `DB_DATABASE` no contiene `"test"`, como
+salvaguarda extra para no poder rellenar producción con datos falsos por
+error. Detalle de cada uno en
+[backend/README.md § Datos de prueba](./backend/README.md#datos-de-prueba-dev).
+
+Puedes destruir y recrear `finance-db-test` cuando quieras sin ningún riesgo
+(`docker rm -f finance-db-test && docker volume rm finance-db-test-data`,
+luego vuelve al paso 1).
 
 ## 🤝 Cómo colaborar
 

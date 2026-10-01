@@ -7,8 +7,15 @@ const cookieParser = require("cookie-parser");
 
 const app = express();
 
-// Configura CORS
-const allowedOrigins = ['http://localhost:3006', 'http://100.87.110.11:3006'];
+// Configura CORS. ALLOWED_ORIGINS (opcional, lista separada por comas en el
+// .env) permite añadir orígenes extra, p.ej. el frontend del entorno de
+// pruebas, sin tocar los de por defecto.
+const defaultOrigins = ['http://localhost:3006', 'http://100.87.110.11:3006'];
+const extraOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowedOrigins = [...defaultOrigins, ...extraOrigins];
 app.use(cors({
   origin: function(origin, callback){
 
