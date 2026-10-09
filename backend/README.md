@@ -100,6 +100,24 @@ Detalle completo (cómo crear el contenedor de BD de pruebas, arrancar
 frontend + backend juntos, sembrar datos ficticios) en el
 [README.md de la raíz § Entorno de pruebas](../README.md#-entorno-de-pruebas-aislado-de-tus-datos-reales).
 
+### Tests unitarios
+
+Esto es distinto del "entorno de pruebas" de arriba (que usa una BD real para
+probar la app a mano): son tests unitarios con [Jest](https://jestjs.io/), no
+necesitan BD ni servidor arrancado, y las dependencias externas (BD,
+modelos) se mockean.
+
+```bash
+npm test
+```
+
+Cobertura actual: helpers de fechas de suscripciones recurrentes
+(`src/utils/fechasRecurrentes.js`), el motor de reconciliación de cargos
+(`src/suscripciones/procesarSuscripciones.js`), el servicio de estadísticas
+(`src/services/statsRegistrosService.js`) y las validaciones de usuario
+(`src/utils/validators.js`). Los tests viven en carpetas `__tests__/` junto
+al código que cubren.
+
 ---
 
 ## Estructura

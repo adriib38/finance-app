@@ -42,6 +42,19 @@ conjunto) en el [README.md de la raíz](../README.md#-entorno-de-pruebas-aislado
 npm run start:test
 ```
 
+## Tests unitarios
+
+Tests con Jest (vía `react-scripts test`, incluido en Create React App) para
+la lógica pura: validaciones de formularios (`src/utils.js`,
+`src/shared/ValidateRows.jsx`) y helpers de rango/formato de fechas
+(`src/utils/dateRange.js`). Viven en carpetas `__tests__/` junto al código
+que cubren.
+
+```bash
+npm test             # modo watch interactivo
+CI=true npm test     # una sola pasada, sin watch (el que usa CI)
+```
+
 ## Build de producción
 
 ```bash

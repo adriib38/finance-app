@@ -4,7 +4,8 @@
   "description": "Mi app node",
   "main": "src/main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "start": "node src/main.js",
     "start:test": "dotenv -e .env.test -- node src/main.js",
     "migrate": "node src/migrate.js",
@@ -39,6 +40,7 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "dotenv-cli": "^11.0.0"
+    "dotenv-cli": "^11.0.0",
+    "jest": "^30.5.2"
   }
 }
