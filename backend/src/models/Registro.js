@@ -1,35 +1,67 @@
 const { v4: uuid } = require("uuid");
-const db = require("../database");
+const { DataTypes, Sequelize } = require("sequelize");
+const sequelize = require("../sequelize");
+
+const RegistroModel = sequelize.define(
+  "Registro",
+  {
+    id: { type: DataTypes.STRING(36), primaryKey: true },
+    concepto: { type: DataTypes.STRING(255), allowNull: true },
+    observaciones: { type: DataTypes.TEXT, allowNull: true },
+    categoria: { type: DataTypes.STRING(100), allowNull: true },
+    categoria_id: { type: DataTypes.STRING(36), allowNull: true },
+    tipo: { type: DataTypes.STRING(20), allowNull: true },
+    cantidad: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
+    fecha: {
+      type: DataTypes.DATEONLY,
+      allowNull: false,
+      defaultValue: Sequelize.fn("CURDATE"),
+    },
+    user: { type: DataTypes.STRING(36), allowNull: false },
+    created_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    updated_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+  },
+  { tableName: "registros" }
+);
+
+const REGISTROS_FROM_USER_ATTRS = [
+  "id",
+  "concepto",
+  "observaciones",
+  "tipo",
+  "cantidad",
+  "categoria",
+  "categoria_id",
+  "fecha",
+  "created_at",
+  "updated_at",
+];
 
 class Registro {
-  constructor(registro) {
-    this.concepto = uuid();
-    this.observaciones = registro.observaciones;
-    this.categoria = registro.categoria;
-    this.tipo = registro.tipo;
-    this.cantidad = registro.cantidad;
-  }
-
   static getAllRegistros(callback) {
-    db.query(`SELECT * FROM registros`, (err, results) => {
-      callback(err, results);
-    });
+    RegistroModel.findAll({ raw: true })
+      .then((results) => callback(null, results))
+      .catch((err) => callback(err, null));
   }
 
   static getRegistroById(id, callback) {
-    db.query(`SELECT * FROM registros WHERE id = ?`, [id], (err, results) => {
-      callback(err, results[0]);
-    });
+    RegistroModel.findOne({ where: { id }, raw: true })
+      .then((result) => callback(null, result || undefined))
+      .catch((err) => callback(err, null));
   }
 
   static getRegistroByCategory(categoria, callback) {
-    db.query(
-      `SELECT * FROM registros WHERE categoria = ?`,
-      [categoria],
-      (err, results) => {
-        callback(err, results);
-      }
-    );
+    RegistroModel.findAll({ where: { categoria }, raw: true })
+      .then((results) => callback(null, results))
+      .catch((err) => callback(err, null));
   }
 
   static updateRegistro(id, newRegistro, callback) {
@@ -43,25 +75,20 @@ class Registro {
       "fecha",
     ];
 
-    const sets = [];
-    const params = [];
+    const values = {};
     for (const col of columns) {
       if (newRegistro[col] !== undefined) {
-        sets.push(`${col} = ?`);
-        params.push(newRegistro[col]);
+        values[col] = newRegistro[col];
       }
     }
 
-    if (sets.length === 0) {
+    if (Object.keys(values).length === 0) {
       return callback(null, { affectedRows: 0 });
     }
 
-    params.push(id);
-    const query = `UPDATE registros SET ${sets.join(", ")} WHERE id = ?`;
-
-    db.query(query, params, (err, results) => {
-      callback(err, results);
-    });
+    RegistroModel.update(values, { where: { id } })
+      .then(([affectedRows]) => callback(null, { affectedRows }))
+      .catch((err) => callback(err, null));
   }
 
   static createRegistro(newRegistro, userUuid, callback) {
@@ -79,26 +106,20 @@ class Registro {
       fecha = null,
     } = newRegistro;
 
-    const query =
-      "INSERT INTO registros (id, concepto, observaciones, categoria, categoria_id, tipo, cantidad, fecha, user) VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURDATE()), ?)";
-
-    const params = [
-      nuevoId,
+    const data = {
+      id: nuevoId,
       concepto,
       observaciones,
       categoria,
       categoria_id,
       tipo,
       cantidad,
-      fecha,
-      userUuid,
-    ];
+      user: userUuid,
+    };
+    if (fecha !== null) data.fecha = fecha;
 
-    db.query(query, params, (err, results) => {
-      if (err) {
-        console.error("Error al crear el registro:", err);
-        callback(err, null);
-      } else {
+    RegistroModel.create(data)
+      .then(() => {
         const nuevoRegistro = {
           id: nuevoId,
           concepto,
@@ -111,33 +132,32 @@ class Registro {
           userUuid,
         };
         callback(null, nuevoRegistro);
-      }
-    });
+      })
+      .catch((err) => {
+        console.error("Error al crear el registro:", err);
+        callback(err, null);
+      });
   }
 
   static deleteRegistro(id, callback) {
-    const query = `DELETE FROM registros WHERE id = ?`;
-    db.query(query, id, (err, results) => {
-      if (err) {
+    RegistroModel.destroy({ where: { id } })
+      .then((affectedRows) => callback(null, { affectedRows }))
+      .catch((err) => {
         console.error("Error al eliminar el registro:", err);
         callback(err, null);
-      } else {
-        callback(null, results);
-      }
-    });
-
+      });
   }
 
   static getRegistrosFromUser(userUuid, callback) {
-    const query = `SELECT id, concepto, observaciones, tipo, cantidad, categoria, categoria_id, fecha, created_at, updated_at FROM registros WHERE user = ?`;
-    db.query(query, userUuid, (err, results) => {
-      if(err) {
-        callback(err, null);
-      } else {
-        callback(null, results);
-      }
-    });
+    RegistroModel.findAll({
+      where: { user: userUuid },
+      attributes: REGISTROS_FROM_USER_ATTRS,
+      raw: true,
+    })
+      .then((results) => callback(null, results))
+      .catch((err) => callback(err, null));
   }
 }
 
+Registro.Model = RegistroModel;
 module.exports = Registro;

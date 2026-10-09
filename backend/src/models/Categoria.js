@@ -1,83 +1,111 @@
 const { v4: uuid } = require("uuid");
-const pool = require("../database");
+const { DataTypes, Op } = require("sequelize");
+const sequelize = require("../sequelize");
 const { colorForIndex } = require("../utils/palette");
-
-const db = pool.promise();
 
 const TIPOS = ["gasto", "ingreso"];
 
+const CategoriaModel = sequelize.define(
+  "Categoria",
+  {
+    id: { type: DataTypes.STRING(36), primaryKey: true },
+    nombre: { type: DataTypes.STRING(100), allowNull: false },
+    tipo: { type: DataTypes.ENUM(...TIPOS), allowNull: false },
+    color: { type: DataTypes.STRING(7), allowNull: true },
+    activa: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+    orden: { type: DataTypes.SMALLINT, allowNull: false, defaultValue: 0 },
+    user: { type: DataTypes.STRING(36), allowNull: false },
+    created_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+  },
+  { tableName: "categorias" }
+);
+
+const PUBLIC_ATTRS = ["id", "nombre", "tipo", "color", "activa", "orden", "created_at"];
+
+// Normaliza el error de restricción UNIQUE (user, tipo, nombre) al formato
+// `err.code === 'ER_DUP_ENTRY'` que ya esperan los controllers.
+function normalizeDupError(err) {
+  if (err.name === "SequelizeUniqueConstraintError") {
+    err.code = "ER_DUP_ENTRY";
+  }
+  throw err;
+}
+
 class Categoria {
   static async getAll(userUuid, { tipo } = {}) {
-    const params = [userUuid];
-    let where = "user = ?";
-    if (tipo && TIPOS.includes(tipo)) {
-      where += " AND tipo = ?";
-      params.push(tipo);
-    }
-    const [rows] = await db.query(
-      `SELECT id, nombre, tipo, color, activa, orden, created_at
-         FROM categorias
-        WHERE ${where}
-        ORDER BY tipo, orden, nombre`,
-      params
-    );
-    return rows;
+    const where = { user: userUuid };
+    if (tipo && TIPOS.includes(tipo)) where.tipo = tipo;
+    return CategoriaModel.findAll({
+      where,
+      attributes: PUBLIC_ATTRS,
+      order: [
+        ["tipo", "ASC"],
+        ["orden", "ASC"],
+        ["nombre", "ASC"],
+      ],
+      raw: true,
+    });
   }
 
   static async getById(id, userUuid) {
-    const [rows] = await db.query(
-      `SELECT id, nombre, tipo, color, activa, orden, created_at
-         FROM categorias WHERE id = ? AND user = ?`,
-      [id, userUuid]
-    );
-    return rows[0] || null;
+    const row = await CategoriaModel.findOne({
+      where: { id, user: userUuid },
+      attributes: PUBLIC_ATTRS,
+      raw: true,
+    });
+    return row || null;
   }
 
   static async create({ nombre, tipo, color, orden }, userUuid) {
     const id = uuid();
-    const [[{ count, maxOrden }]] = await db.query(
-      `SELECT COUNT(*) AS count, COALESCE(MAX(orden), -1) AS maxOrden
-         FROM categorias WHERE user = ? AND tipo = ?`,
-      [userUuid, tipo]
-    );
+    const count = await CategoriaModel.count({ where: { user: userUuid, tipo } });
+    const maxOrden = await CategoriaModel.max("orden", { where: { user: userUuid, tipo } });
     const nextOrden =
-      orden === undefined || orden === null ? maxOrden + 1 : orden;
+      orden === undefined || orden === null
+        ? (maxOrden === null ? -1 : maxOrden) + 1
+        : orden;
     const finalColor = color || colorForIndex(count);
-    await db.query(
-      `INSERT INTO categorias (id, nombre, tipo, color, orden, user)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [id, nombre.trim(), tipo, finalColor, nextOrden, userUuid]
-    );
+    try {
+      await CategoriaModel.create({
+        id,
+        nombre: nombre.trim(),
+        tipo,
+        color: finalColor,
+        orden: nextOrden,
+        user: userUuid,
+      });
+    } catch (err) {
+      normalizeDupError(err);
+    }
     return this.getById(id, userUuid);
   }
 
   static async update(id, userUuid, fields) {
     const allowed = ["nombre", "color", "activa", "orden"];
-    const sets = [];
-    const params = [];
+    const values = {};
     for (const key of allowed) {
       if (fields[key] !== undefined) {
-        sets.push(`${key} = ?`);
-        params.push(key === "nombre" ? String(fields[key]).trim() : fields[key]);
+        values[key] = key === "nombre" ? String(fields[key]).trim() : fields[key];
       }
     }
-    if (sets.length === 0) return this.getById(id, userUuid);
-    params.push(id, userUuid);
-    await db.query(
-      `UPDATE categorias SET ${sets.join(", ")} WHERE id = ? AND user = ?`,
-      params
-    );
+    if (Object.keys(values).length === 0) return this.getById(id, userUuid);
+    try {
+      await CategoriaModel.update(values, { where: { id, user: userUuid } });
+    } catch (err) {
+      normalizeDupError(err);
+    }
     return this.getById(id, userUuid);
   }
 
   static async remove(id, userUuid) {
     // La FK en registros es ON DELETE SET NULL: los registros conservan el
     // texto en `registros.categoria` pero pierden el enlace.
-    const [res] = await db.query(
-      `DELETE FROM categorias WHERE id = ? AND user = ?`,
-      [id, userUuid]
-    );
-    return res.affectedRows > 0;
+    const affected = await CategoriaModel.destroy({ where: { id, user: userUuid } });
+    return affected > 0;
   }
 
   /**
@@ -97,28 +125,20 @@ class Categoria {
       throw new Error("Sólo se pueden fusionar categorías del mismo tipo");
     }
 
-    const conn = await pool.promise().getConnection();
-    try {
-      await conn.beginTransaction();
-      await conn.query(
-        `UPDATE registros SET categoria_id = ?, categoria = ?
-           WHERE categoria_id = ? AND user = ?`,
-        [targetId, target.nombre, sourceId, userUuid]
+    await sequelize.transaction(async (t) => {
+      await sequelize.models.Registro.update(
+        { categoria_id: targetId, categoria: target.nombre },
+        { where: { categoria_id: sourceId, user: userUuid }, transaction: t }
       );
-      await conn.query(`DELETE FROM categorias WHERE id = ? AND user = ?`, [
-        sourceId,
-        userUuid,
-      ]);
-      await conn.commit();
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+      await CategoriaModel.destroy({
+        where: { id: sourceId, user: userUuid },
+        transaction: t,
+      });
+    });
     return this.getById(targetId, userUuid);
   }
 }
 
 Categoria.TIPOS = TIPOS;
+Categoria.Model = CategoriaModel;
 module.exports = Categoria;

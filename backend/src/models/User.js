@@ -1,6 +1,22 @@
-const db = require("../database");
+const { DataTypes } = require("sequelize");
 const bcrypt = require("bcryptjs");
+const sequelize = require("../sequelize");
 require("dotenv").config();
+
+const UserModel = sequelize.define(
+  "User",
+  {
+    uuid: { type: DataTypes.STRING(36), primaryKey: true },
+    username: { type: DataTypes.STRING(100), allowNull: false, unique: true },
+    password: { type: DataTypes.STRING(255), allowNull: false },
+    created_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+  },
+  { tableName: "users" }
+);
 
 // App de un solo usuario: sólo lectura de la cuenta y verificación de contraseña.
 // El alta del usuario admin se hace en src/seedAdmin.js al arrancar el servidor.
@@ -16,18 +32,12 @@ class User {
       return callback(error, null);
     }
 
-    db.query(
-      "SELECT * FROM users WHERE username = ?",
-      [username],
-      (err, results) => {
-        if (err) {
-          console.error("Error getting user:", err);
-          return callback(err, null);
-        } else {
-          return callback(null, results[0]);
-        }
-      }
-    );
+    UserModel.findOne({ where: { username }, raw: true })
+      .then((result) => callback(null, result || undefined))
+      .catch((err) => {
+        console.error("Error getting user:", err);
+        callback(err, null);
+      });
   }
 
   static getUserByUuid(uuid, callback) {
@@ -37,18 +47,16 @@ class User {
       return callback(error, null);
     }
 
-    db.query(
-      "SELECT uuid, username, created_at FROM users WHERE uuid = ?",
-      [uuid],
-      (err, results) => {
-        if (err) {
-          console.error("Error getting user:", err);
-          return callback(err, null);
-        } else {
-          return callback(null, results[0]);
-        }
-      }
-    );
+    UserModel.findOne({
+      where: { uuid },
+      attributes: ["uuid", "username", "created_at"],
+      raw: true,
+    })
+      .then((result) => callback(null, result || undefined))
+      .catch((err) => {
+        console.error("Error getting user:", err);
+        callback(err, null);
+      });
   }
 }
 

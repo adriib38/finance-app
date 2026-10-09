@@ -1,44 +1,75 @@
 const { v4: uuid } = require("uuid");
-const pool = require("../database");
-
-const db = pool.promise();
+const { DataTypes, Op, Sequelize } = require("sequelize");
+const sequelize = require("../sequelize");
 
 const TIPOS = ["accion", "etf"];
 
 const round2 = (n) => Math.round(Number(n || 0) * 100) / 100;
 
-const COLUMNS =
-  "id, ticker, nombre, tipo, participaciones, precio_compra, importe, fecha, observaciones, created_at, updated_at";
+const COLUMNS = [
+  "id",
+  "ticker",
+  "nombre",
+  "tipo",
+  "participaciones",
+  "precio_compra",
+  "importe",
+  "fecha",
+  "observaciones",
+  "created_at",
+  "updated_at",
+];
+
+const InversionModel = sequelize.define(
+  "Inversion",
+  {
+    id: { type: DataTypes.STRING(36), primaryKey: true },
+    ticker: { type: DataTypes.STRING(20), allowNull: false },
+    nombre: { type: DataTypes.STRING(150), allowNull: true },
+    tipo: { type: DataTypes.ENUM(...TIPOS), allowNull: false },
+    participaciones: { type: DataTypes.DECIMAL(18, 6), allowNull: false },
+    precio_compra: { type: DataTypes.DECIMAL(12, 4), allowNull: false },
+    importe: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
+    fecha: {
+      type: DataTypes.DATEONLY,
+      allowNull: false,
+      defaultValue: Sequelize.fn("CURDATE"),
+    },
+    observaciones: { type: DataTypes.TEXT, allowNull: true },
+    user: { type: DataTypes.STRING(36), allowNull: false },
+    created_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+    updated_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+  },
+  { tableName: "inversiones" }
+);
 
 class Inversion {
   static async getAll(userUuid, { from, to, ticker } = {}) {
-    const params = [userUuid];
-    let where = "user = ?";
-    if (from) {
-      where += " AND fecha >= ?";
-      params.push(from);
+    const where = { user: userUuid };
+    if (from || to) {
+      where.fecha = {};
+      if (from) where.fecha[Op.gte] = from;
+      if (to) where.fecha[Op.lte] = to;
     }
-    if (to) {
-      where += " AND fecha <= ?";
-      params.push(to);
-    }
-    if (ticker) {
-      where += " AND ticker = ?";
-      params.push(ticker.toUpperCase());
-    }
-    const [rows] = await db.query(
-      `SELECT ${COLUMNS} FROM inversiones WHERE ${where} ORDER BY fecha DESC, created_at DESC`,
-      params
-    );
-    return rows;
+    if (ticker) where.ticker = ticker.toUpperCase();
+    return InversionModel.findAll({
+      where,
+      attributes: COLUMNS,
+      order: [
+        ["fecha", "DESC"],
+        ["created_at", "DESC"],
+      ],
+      raw: true,
+    });
   }
 
   static async getById(id, userUuid) {
-    const [rows] = await db.query(
-      `SELECT ${COLUMNS} FROM inversiones WHERE id = ? AND user = ?`,
-      [id, userUuid]
-    );
-    return rows[0] || null;
+    const row = await InversionModel.findOne({
+      where: { id, user: userUuid },
+      attributes: COLUMNS,
+      raw: true,
+    });
+    return row || null;
   }
 
   static async create(
@@ -48,23 +79,19 @@ class Inversion {
     const id = uuid();
     // El importe aportado lo calcula el servidor, nunca lo manda el cliente.
     const importe = round2(Number(participaciones) * Number(precio_compra));
-    await db.query(
-      `INSERT INTO inversiones
-        (id, ticker, nombre, tipo, participaciones, precio_compra, importe, fecha, observaciones, user)
-       VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURDATE()), ?, ?)`,
-      [
-        id,
-        String(ticker).trim().toUpperCase(),
-        nombre ? String(nombre).trim() : null,
-        tipo,
-        participaciones,
-        precio_compra,
-        importe,
-        fecha || null,
-        observaciones || null,
-        userUuid,
-      ]
-    );
+    const data = {
+      id,
+      ticker: String(ticker).trim().toUpperCase(),
+      nombre: nombre ? String(nombre).trim() : null,
+      tipo,
+      participaciones,
+      precio_compra,
+      importe,
+      observaciones: observaciones || null,
+      user: userUuid,
+    };
+    if (fecha) data.fecha = fecha;
+    await InversionModel.create(data);
     return this.getById(id, userUuid);
   }
 
@@ -79,37 +106,30 @@ class Inversion {
     const precioCompra =
       fields.precio_compra !== undefined ? fields.precio_compra : existing.precio_compra;
 
-    const sets = [];
-    const params = [];
-
+    const values = {};
     const simple = ["nombre", "tipo", "fecha", "observaciones"];
     for (const key of simple) {
       if (fields[key] !== undefined) {
-        sets.push(`${key} = ?`);
-        params.push(key === "nombre" && fields[key] ? String(fields[key]).trim() : fields[key]);
+        values[key] = key === "nombre" && fields[key] ? String(fields[key]).trim() : fields[key];
       }
     }
     if (fields.ticker !== undefined) {
-      sets.push("ticker = ?");
-      params.push(String(fields.ticker).trim().toUpperCase());
+      values.ticker = String(fields.ticker).trim().toUpperCase();
     }
     if (fields.participaciones !== undefined || fields.precio_compra !== undefined) {
-      sets.push("participaciones = ?", "precio_compra = ?", "importe = ?");
-      params.push(participaciones, precioCompra, round2(Number(participaciones) * Number(precioCompra)));
+      values.participaciones = participaciones;
+      values.precio_compra = precioCompra;
+      values.importe = round2(Number(participaciones) * Number(precioCompra));
     }
 
-    if (sets.length === 0) return existing;
-    params.push(id, userUuid);
-    await db.query(`UPDATE inversiones SET ${sets.join(", ")} WHERE id = ? AND user = ?`, params);
+    if (Object.keys(values).length === 0) return existing;
+    await InversionModel.update(values, { where: { id, user: userUuid } });
     return this.getById(id, userUuid);
   }
 
   static async remove(id, userUuid) {
-    const [res] = await db.query(`DELETE FROM inversiones WHERE id = ? AND user = ?`, [
-      id,
-      userUuid,
-    ]);
-    return res.affectedRows > 0;
+    const affected = await InversionModel.destroy({ where: { id, user: userUuid } });
+    return affected > 0;
   }
 
   // Total aportado a la cartera + posición agregada por ticker (participaciones
@@ -121,30 +141,55 @@ class Inversion {
   // bruto es el que hace falta como base de coste para calcular el
   // beneficio total más adelante (beneficio = valor_actual + vendido - bruto).
   static async getResumen(userUuid) {
-    const [posiciones] = await db.query(
-      `SELECT
-          ticker,
-          -- nombre/tipo pueden variar entre aportaciones (rara vez); nos
-          -- quedamos con los de la aportación más reciente.
-          SUBSTRING_INDEX(GROUP_CONCAT(nombre ORDER BY fecha DESC, created_at DESC), ',', 1) AS nombre,
-          SUBSTRING_INDEX(GROUP_CONCAT(tipo ORDER BY fecha DESC, created_at DESC), ',', 1) AS tipo,
-          SUM(participaciones) AS participaciones,
-          SUM(importe) AS importe
-         FROM inversiones
-        WHERE user = ?
-        GROUP BY ticker
-        ORDER BY importe DESC`,
-      [userUuid]
-    );
+    const posiciones = await InversionModel.findAll({
+      where: { user: userUuid },
+      attributes: [
+        "ticker",
+        // nombre/tipo pueden variar entre aportaciones (rara vez); nos
+        // quedamos con los de la aportación más reciente.
+        [
+          sequelize.literal(
+            "SUBSTRING_INDEX(GROUP_CONCAT(nombre ORDER BY fecha DESC, created_at DESC), ',', 1)"
+          ),
+          "nombre",
+        ],
+        [
+          sequelize.literal(
+            "SUBSTRING_INDEX(GROUP_CONCAT(tipo ORDER BY fecha DESC, created_at DESC), ',', 1)"
+          ),
+          "tipo",
+        ],
+        [sequelize.fn("SUM", sequelize.col("participaciones")), "participaciones"],
+        [sequelize.fn("SUM", sequelize.col("importe")), "importe"],
+      ],
+      group: ["ticker"],
+      order: [[sequelize.literal("importe"), "DESC"]],
+      raw: true,
+    });
 
-    const [[{ totalInvertido, totalVendido }]] = await db.query(
-      `SELECT
-          IFNULL(SUM(CASE WHEN importe > 0 THEN importe ELSE 0 END), 0) AS totalInvertido,
-          IFNULL(SUM(CASE WHEN importe < 0 THEN -importe ELSE 0 END), 0) AS totalVendido
-         FROM inversiones
-        WHERE user = ?`,
-      [userUuid]
-    );
+    const totales = await InversionModel.findOne({
+      where: { user: userUuid },
+      attributes: [
+        [
+          sequelize.fn(
+            "SUM",
+            sequelize.literal("CASE WHEN importe > 0 THEN importe ELSE 0 END")
+          ),
+          "totalInvertido",
+        ],
+        [
+          sequelize.fn(
+            "SUM",
+            sequelize.literal("CASE WHEN importe < 0 THEN -importe ELSE 0 END")
+          ),
+          "totalVendido",
+        ],
+      ],
+      raw: true,
+    });
+
+    const totalInvertido = totales ? totales.totalInvertido : 0;
+    const totalVendido = totales ? totales.totalVendido : 0;
 
     const total = posiciones.reduce((acc, p) => acc + Number(p.importe || 0), 0);
 
@@ -170,17 +215,20 @@ class Inversion {
 
   // Aportaciones mensuales agregadas, para el gráfico de barras.
   static async getAportacionesMensuales(userUuid) {
-    const [rows] = await db.query(
-      `SELECT DATE_FORMAT(fecha, '%Y-%m') AS periodo, SUM(importe) AS importe
-         FROM inversiones
-        WHERE user = ?
-        GROUP BY periodo
-        ORDER BY periodo`,
-      [userUuid]
-    );
+    const rows = await InversionModel.findAll({
+      where: { user: userUuid },
+      attributes: [
+        [sequelize.fn("DATE_FORMAT", sequelize.col("fecha"), "%Y-%m"), "periodo"],
+        [sequelize.fn("SUM", sequelize.col("importe")), "importe"],
+      ],
+      group: [sequelize.literal("periodo")],
+      order: [[sequelize.literal("periodo"), "ASC"]],
+      raw: true,
+    });
     return rows.map((r) => ({ periodo: r.periodo, importe: round2(r.importe) }));
   }
 }
 
 Inversion.TIPOS = TIPOS;
+Inversion.Model = InversionModel;
 module.exports = Inversion;
