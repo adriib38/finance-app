@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useContext } from "react";
 import { askBot } from "../../services/AiService";
 import { RegistrosContext } from "../../context/RegistrosContext";
 import "./style.css";
+import ReactMarkdown from "react-markdown";
 
 const SUGERENCIAS = [
   "¿Cuánto he gastado este mes?",
@@ -154,7 +155,10 @@ function BotChat({ onClose, autoFocus = true }) {
               </span>
             )}
             <div className={`bot-bubble bot-bubble--${m.role}`}>
-              <p className="bot-text">{m.text}</p>
+              <p className="bot-text"><ReactMarkdown>{m.text}</ReactMarkdown></p>
+              {m.role === "error" && (
+                <p className="bot-error">⚠️ {m.text}</p>
+              )}
               {m.role === "bot" && <ConsultasSQL consultas={m.consultas} />}
             </div>
           </div>

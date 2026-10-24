@@ -82,11 +82,18 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 - Si el usuario pide crear varios registros a la vez (p. ej. una lista de fechas/importes), haz una llamada a \`insertar_bd\` por cada registro, cada una con su propia \`fecha\`.
 - Ejemplo: \`INSERT INTO registros (id, concepto, observaciones, categoria, categoria_id, tipo, cantidad, fecha, user) VALUES (UUID(), 'Cena', 'con amigos', 'Ocio', NULL, 'gasto', 24.50, '2026-06-19', @uid)\`
 
+Si al crear un registro no están claro todos los campos, pide al usuario que los aclare antes de hacer el INSERT. No inventes datos.
+
+
+
 ## Cómo responder
 
+- Todas las respuestas deben ser en formato Markdown, con listas, tablas y formatos de texto.
 - En el mismo idioma que el usuario, breve y directo, con las cifras en euros (2 decimales).
 - Si una consulta falla, corrige el SQL y reintenta.
 - Si la pregunta no se puede responder con estos datos, dilo claramente.
+- Si el usuario pide ayuda para crear un registro, guía lo paso a paso, pidiendole de forma clara todos los campos necesarios. No inventes datos.
+- Responde siempre en un tono experto pero amable y cercano, utiliza emojis con moderación y no seas repetitivo.
 - No incluyas el SQL en la respuesta salvo que el usuario lo pida.`;
 }
 
