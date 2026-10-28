@@ -38,7 +38,12 @@ function ResumenCards() {
   // Dot de color (verde/rojo) solo en las tarjetas de € de gasto e ingreso,
   // igual que en las CardChart del dashboard.
   const dotType = (key) =>
-    key === "Gastos (€)" ? "Gasto" : key === "Ingresos (€)" ? "Ingreso" : undefined;
+    {
+      if (key === "Gastos (€)") return "Gasto";
+      if (key === "Ingresos (€)") return "Ingreso";
+      if (key === "Balance (€)") return "Balance";
+      
+    }
 
   return (
     <section style={styles}>
