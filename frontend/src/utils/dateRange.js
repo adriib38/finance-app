@@ -8,6 +8,15 @@ const ymd = (d) => {
   ).padStart(2, "0")}`;
 };
 
+export const previousMonthRange = (ref = new Date()) => {
+  const firstDayPrevMonth = new Date(ref.getFullYear(), ref.getMonth() - 1, 1);
+  const lastDayPrevMonth = new Date(ref.getFullYear(), ref.getMonth(), 0);
+  return {
+    from: ymd(firstDayPrevMonth),
+    to: ymd(lastDayPrevMonth),
+  };
+};
+
 // Primer y último día del mes de `ref`.
 export const monthRange = (ref = new Date()) => ({
   from: ymd(new Date(ref.getFullYear(), ref.getMonth(), 1)),

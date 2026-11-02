@@ -1,10 +1,11 @@
 import { createContext, useMemo, useState } from "react";
-import { monthRange, yearRange } from "../utils/dateRange";
+import { previousMonthRange, monthRange, yearRange } from "../utils/dateRange";
 
 export const HomeFilterContext = createContext();
 
 /**
  * Filtro de fechas de la home. Modos:
+ *  - "mes-anterior" → mes anterior
  *  - "mes"    → mes actual (por defecto)
  *  - "anio"   → año actual
  *  - "custom" → rango elegido a mano
@@ -19,6 +20,9 @@ export function HomeFilterProvider({ children }) {
 
   const range = useMemo(() => {
     if (mode === "anio") return yearRange();
+    if (mode === "mes") return monthRange();
+    if (mode === "mes-anterior") return previousMonthRange();
+  
     if (mode === "custom") {
       return { from: customFrom || undefined, to: customTo || undefined };
     }

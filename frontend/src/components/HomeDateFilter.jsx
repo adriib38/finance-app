@@ -29,6 +29,7 @@ function HomeDateFilter() {
           value={mode === "custom" ? null : mode}
           onChange={(_e, v) => v && setMode(v)}
         >
+          <ToggleButton value="mes-anterior">Mes anterior</ToggleButton>
           <ToggleButton value="mes">Mes actual</ToggleButton>
           <ToggleButton value="anio">Año actual</ToggleButton>
         </ToggleButtonGroup>
