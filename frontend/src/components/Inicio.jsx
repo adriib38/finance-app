@@ -2,6 +2,7 @@ import { useEffect, useState, useContext } from "react";
 import StatsCard from "./StatsCard";
 import HomeDateFilter from "./HomeDateFilter";
 import Dashboard from "../shared/Dashboard";
+import WrappedBanner from "./Wrapped/WrappedBanner";
 import { getStatsResume as getStatsResumeService } from "../services/RegistrosService";
 import { HomeFilterProvider, HomeFilterContext } from "../context/HomeFilterContext";
 //import { AuthContext } from "../context/AuthContext";
@@ -68,6 +69,8 @@ function Inicio() {
           return "Buenas noches 🌙";
         })()}{" "}
         tu resumen financiero.</h1>
+
+      <WrappedBanner />
 
       <HomeFilterProvider>
         <HomeDateFilter />

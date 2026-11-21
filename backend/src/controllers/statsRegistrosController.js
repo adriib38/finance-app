@@ -60,10 +60,25 @@ const getTopGastos = async (req, res) => {
   }
 }
 
+const getWrapped = async (req, res) => {
+  try {
+    const year = parseInt(req.query.year, 10);
+    const data = await statsRegistrosService.getWrapped(
+      req.userUuid,
+      Number.isInteger(year) ? year : undefined
+    );
+    res.send(data);
+  } catch (error) {
+    console.error("Error al obtener wrapped:", error);
+    res.status(500).send({ message: "Error al obtener wrapped" });
+  }
+}
+
 module.exports = {
   getStats,
   getCantidadCategoriasGastos,
   getCantidadCategoriasIngresos,
   getTimeline,
-  getTopGastos
+  getTopGastos,
+  getWrapped
 };

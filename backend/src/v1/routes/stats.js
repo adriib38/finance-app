@@ -10,5 +10,6 @@ router
     .get("/cantidadCategoriasIngresos", verifyToken, statsRegistrosController.getCantidadCategoriasIngresos)
     .get("/timeline", verifyToken, statsRegistrosController.getTimeline)
     .get("/topGastos", verifyToken, statsRegistrosController.getTopGastos)
+    .get("/wrapped", verifyToken, statsRegistrosController.getWrapped)
 
 module.exports = router;

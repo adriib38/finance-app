@@ -19,6 +19,7 @@
     "@mui/x-data-grid-generator": "^7.6.0",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
+    "framer-motion": "^14.14.0",
     "js-cookie": "^3.0.5",
     "mui": "^0.0.1",
     "prop-types": "^15.8.1",
