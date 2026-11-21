@@ -9,6 +9,28 @@ const rangeQuery = (range = {}) => {
     return s ? `?${s}` : "";
 };
 
+export const getStatsWrapped = async (year) => {
+    const url = `${API_BASE_URL}/stats/wrapped${year ? `?year=${year}` : ""}`;
+    try {
+        const resp = await fetch(url, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include"
+        });
+        if (!resp.ok) {
+            throw new Error('Failed to fetch wrapped');
+        }
+
+        const data = await resp.json();
+        return { status: resp.status, data: data };
+    } catch(error) {
+        console.error('Error fetching wrapped:', error);
+        throw error;
+    }
+}
+
 export const getStatsCantidadCategoria = async (type, range) => {
     const url = `${API_BASE_URL}/stats/cantidadCategorias${type}${rangeQuery(range)}`;
     try {
